@@ -1,14 +1,24 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"log"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
+	"github.com/tektoncd/pipeline/pkg/client/injection/client"
 )
 
 func main() {
-	srv := &server{}
+	flag.Parse()
+
+	ctx := context.Background()
+
+	srv := &server{
+		client: client.Get(ctx),
+	}
 
 	router := httprouter.New()
 	router.POST("/v1/projects/:projectID/builds", srv.createBuild)
@@ -18,6 +28,7 @@ func main() {
 }
 
 type server struct {
+	client versioned.Interface
 }
 
 func (s *server) createBuild(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
