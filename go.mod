@@ -16,7 +16,6 @@ require (
 	github.com/go-openapi/swag v0.19.4 // indirect
 	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
-	github.com/golang/protobuf v1.3.2
 	github.com/google/pprof v0.0.0-20190723021845-34ac40c74b70 // indirect
 	github.com/googleapis/gnostic v0.3.0 // indirect
 	github.com/gophercloud/gophercloud v0.2.0 // indirect
@@ -25,7 +24,7 @@ require (
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/json-iterator/go v1.1.7 // indirect
 	github.com/julienschmidt/httprouter v1.2.0
-	github.com/knative/pkg v0.0.0-20190725165936-fe4877abb6e4
+	github.com/knative/pkg v0.0.0-20190725165936-fe4877abb6e4 // indirect
 	github.com/kr/pty v1.1.8 // indirect
 	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e // indirect
 	github.com/mattbaird/jsonpatch v0.0.0-20171005235357-81af80346b1a // indirect
