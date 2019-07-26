@@ -50,7 +50,7 @@ func (s *Server) ListBuilds(w http.ResponseWriter, r *http.Request, ps httproute
 		return
 	}
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Println("Encode: %v", err)
+		log.Printf("Encode: %v", err)
 	}
 }
 
@@ -71,7 +71,7 @@ func (s *Server) CreateBuild(w http.ResponseWriter, r *http.Request, ps httprout
 		return
 	}
 	if err := json.NewEncoder(w).Encode(b); err != nil {
-		log.Println("Encode: %v", err)
+		log.Printf("Encode: %v", err)
 	}
 }
 
@@ -85,6 +85,6 @@ func (s *Server) GetBuild(w http.ResponseWriter, r *http.Request, ps httprouter.
 		return
 	}
 	if err := json.NewEncoder(w).Encode(b); err != nil {
-		log.Println("Encode: %v", err)
+		log.Printf("Encode: %v", err)
 	}
 }
