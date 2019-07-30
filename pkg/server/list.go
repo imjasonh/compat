@@ -17,6 +17,8 @@ limitations under the License.
 package server
 
 import (
+	"log"
+
 	"github.com/ImJasonH/compat/pkg/convert"
 	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
@@ -24,6 +26,7 @@ import (
 )
 
 func list(projectID string, client v1alpha1.TaskRunInterface) (*gcb.ListBuildsResponse, error) {
+	log.Println("Listing Builds...")
 	resp, err := client.List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err

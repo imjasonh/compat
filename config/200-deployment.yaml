@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gcb-compat
+  namespace: gcb-compat
+  labels:
+    app: gcb-compat
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: gcb-compat
+  template:
+    metadata:
+      labels:
+        app: gcb-compat
+    spec:
+      serviceAccountName: gcb-compat-account
+      containers:
+      - name: gcb-compat
+        image: github.com/ImJasonH/compat
+        args: ['--namespace=gcb-compat']
+        ports:
+        - containerPort: 80
+

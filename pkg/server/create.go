@@ -17,16 +17,21 @@ limitations under the License.
 package server
 
 import (
+	"log"
+
 	"github.com/ImJasonH/compat/pkg/convert"
+	"github.com/google/uuid"
 	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
 )
 
 func create(b *gcb.Build, client v1alpha1.TaskRunInterface) (*gcb.Build, error) {
+	log.Println("Creating Build...")
 	tr, err := convert.ToTaskRun(b)
 	if err != nil {
 		return nil, err
 	}
+	tr.Name = uuid.New().String() // Generate the build ID.
 	tr, err = client.Create(tr)
 	if err != nil {
 		return nil, err
