@@ -46,15 +46,15 @@ github.com/pkg/errors
 github.com/sergi/go-diff/diffmatchpatch
 # github.com/tektoncd/pipeline v0.5.1-0.20190726152956-c5769af4dcd1
 github.com/tektoncd/pipeline/pkg/client/clientset/versioned
-github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1
 github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1
+github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1
+github.com/tektoncd/pipeline/pkg/client/clientset/versioned/scheme
 github.com/tektoncd/pipeline/pkg/apis/config
 github.com/tektoncd/pipeline/pkg/apis/pipeline
 github.com/tektoncd/pipeline/pkg/list
 github.com/tektoncd/pipeline/pkg/merge
 github.com/tektoncd/pipeline/pkg/names
 github.com/tektoncd/pipeline/pkg/templating
-github.com/tektoncd/pipeline/pkg/client/clientset/versioned/scheme
 # go.opencensus.io v0.22.0
 go.opencensus.io/plugin/ochttp
 go.opencensus.io/plugin/ochttp/propagation/b3
@@ -76,16 +76,16 @@ go.opencensus.io
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/net v0.0.0-20190724013045-ca1201d0de80
 golang.org/x/net/http2
+golang.org/x/net/context/ctxhttp
+golang.org/x/net/context
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/trace
-golang.org/x/net/context
-golang.org/x/net/context/ctxhttp
 golang.org/x/net/internal/timeseries
 # golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-golang.org/x/oauth2
 golang.org/x/oauth2/google
+golang.org/x/oauth2
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
@@ -113,12 +113,12 @@ google.golang.org/api/internal
 google.golang.org/api/googleapi/transport
 google.golang.org/api/transport/http/internal/propagation
 # google.golang.org/appengine v1.6.1
-google.golang.org/appengine/urlfetch
 google.golang.org/appengine
+google.golang.org/appengine/urlfetch
 google.golang.org/appengine/internal
-google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/internal/app_identity
 google.golang.org/appengine/internal/modules
+google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/datastore
 google.golang.org/appengine/internal/log
@@ -202,6 +202,9 @@ k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
 # k8s.io/apimachinery v0.0.0-20190726022757-641a75999153
 k8s.io/apimachinery/pkg/apis/meta/v1
+k8s.io/apimachinery/pkg/runtime/serializer
+k8s.io/apimachinery/pkg/types
+k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/pkg/api/resource
 k8s.io/apimachinery/pkg/conversion
 k8s.io/apimachinery/pkg/fields
@@ -209,10 +212,8 @@ k8s.io/apimachinery/pkg/labels
 k8s.io/apimachinery/pkg/runtime
 k8s.io/apimachinery/pkg/runtime/schema
 k8s.io/apimachinery/pkg/selection
-k8s.io/apimachinery/pkg/types
 k8s.io/apimachinery/pkg/util/intstr
 k8s.io/apimachinery/pkg/util/runtime
-k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/runtime/serializer/streaming
 k8s.io/apimachinery/pkg/util/net
@@ -220,9 +221,12 @@ k8s.io/apimachinery/pkg/util/sets
 k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/util/validation
 k8s.io/apimachinery/pkg/api/validation
-k8s.io/apimachinery/pkg/runtime/serializer
 k8s.io/apimachinery/pkg/version
 k8s.io/apimachinery/pkg/util/clock
+k8s.io/apimachinery/pkg/runtime/serializer/json
+k8s.io/apimachinery/pkg/runtime/serializer/protobuf
+k8s.io/apimachinery/pkg/runtime/serializer/recognizer
+k8s.io/apimachinery/pkg/runtime/serializer/versioning
 k8s.io/apimachinery/third_party/forked/golang/reflect
 k8s.io/apimachinery/pkg/conversion/queryparams
 k8s.io/apimachinery/pkg/util/errors
@@ -233,15 +237,11 @@ k8s.io/apimachinery/pkg/util/strategicpatch
 k8s.io/apimachinery/pkg/util/rand
 k8s.io/apimachinery/pkg/api/meta
 k8s.io/apimachinery/pkg/apis/meta/v1/validation
-k8s.io/apimachinery/pkg/runtime/serializer/json
-k8s.io/apimachinery/pkg/runtime/serializer/protobuf
-k8s.io/apimachinery/pkg/runtime/serializer/recognizer
-k8s.io/apimachinery/pkg/runtime/serializer/versioning
+k8s.io/apimachinery/pkg/util/framer
+k8s.io/apimachinery/pkg/util/yaml
 k8s.io/apimachinery/pkg/apis/meta/v1/unstructured
 k8s.io/apimachinery/pkg/util/mergepatch
 k8s.io/apimachinery/third_party/forked/golang/json
-k8s.io/apimachinery/pkg/util/framer
-k8s.io/apimachinery/pkg/util/yaml
 k8s.io/apimachinery/pkg/util/cache
 k8s.io/apimachinery/pkg/util/diff
 k8s.io/apimachinery/pkg/util/wait

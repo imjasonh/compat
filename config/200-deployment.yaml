@@ -19,7 +19,6 @@ spec:
       containers:
       - name: gcb-compat
         image: github.com/ImJasonH/compat
-        args: ['--namespace=gcb-compat']
         ports:
         - containerPort: 80
 

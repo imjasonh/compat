@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package convert provides methods to translate Argo API protobuf messages to
-// Build CRD resource definitions.
+// Package convert provides methods to translate GCB API request messages to
+// Tekton TaskRun custom resource definitions.
 package convert
 
 import (
@@ -32,8 +32,6 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-const robotEmail = "TODO" // TODO
-
 // ErrIncompatible is returned by ToTaskRun when the requested build is not
 // compatible with on-cluster execution.
 //
@@ -48,12 +46,6 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 		return nil, ErrIncompatible
 	}
 	out := &v1alpha1.TaskRun{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: b.Id,
-			Annotations: map[string]string{
-				"cloud.google.com/service-account": robotEmail,
-			},
-		},
 		Spec: v1alpha1.TaskRunSpec{
 			TaskSpec: &v1alpha1.TaskSpec{},
 		},
@@ -106,7 +98,7 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 				allVols[v.Name] = corev1.Volume{
 					Name: v.Name,
 					// EmptyDir is a volume which is created as empty at the beginning of
-					// the build and discarded at the end, just like Argo volumes today.
+					// the build and discarded at the end, just like GCB volumes today.
 					VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 				}
 			}
@@ -129,7 +121,6 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 	// Sort volumes for reproducibility.
 	sort.Slice(out.Spec.TaskSpec.Volumes, func(i, j int) bool { return out.Spec.TaskSpec.Volumes[i].Name < out.Spec.TaskSpec.Volumes[j].Name })
 
-	// TODO: Convert source.
 	if b.Source != nil {
 		if b.Source.StorageSource == nil {
 			return nil, ErrIncompatible
@@ -231,13 +222,6 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 	}
 
 	// TODO(jasonhall): build.Timing for FETCHSOURCE and BUILD (no PUSH)
-
-	// If there are more Steps than steps (because they include states
-	// for implicit steps), only consider the last step states.
-	// TODO(jasonhall): Fix this bug in Knative Build.
-	if len(tr.Status.Steps) > len(tr.Spec.TaskSpec.Steps) {
-		tr.Status.Steps = tr.Status.Steps[len(tr.Status.Steps)-len(tr.Spec.TaskSpec.Steps):]
-	}
 
 	for i, state := range tr.Status.Steps {
 		if term := state.Terminated; term != nil {

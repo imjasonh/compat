@@ -19,6 +19,7 @@ package server
 import (
 	"log"
 
+	"github.com/ImJasonH/compat/constants"
 	"github.com/ImJasonH/compat/pkg/convert"
 	"github.com/google/uuid"
 	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
@@ -31,7 +32,8 @@ func create(b *gcb.Build, client v1alpha1.TaskRunInterface) (*gcb.Build, error) 
 	if err != nil {
 		return nil, err
 	}
-	tr.Name = uuid.New().String() // Generate the build ID.
+	tr.Name = uuid.New().String()                         // Generate the build ID.
+	tr.Spec.ServiceAccount = constants.ServiceAccountName // Run as the Workload Identity KSA/GSA
 	tr, err = client.Create(tr)
 	if err != nil {
 		return nil, err
