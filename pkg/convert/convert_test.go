@@ -110,10 +110,8 @@ func TestToTaskRun(t *testing.T) {
 
 	wantTaskRun := &v1alpha1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "compatible",
 			Annotations: map[string]string{
-				"cloud.google.com/service-account": robotEmail,
-				"entrypoint-0":                     "bash",
+				"entrypoint-0": "bash",
 			},
 		},
 		Spec: v1alpha1.TaskRunSpec{
@@ -383,7 +381,6 @@ func TestToBuild_Status(t *testing.T) {
 }
 
 func TestToBuild_MoreSteps(t *testing.T) {
-	implicitOneStart, implicitTwoStart := time.Now(), time.Now().Add(time.Hour)
 	stepOneStart, stepTwoStart, stepThreeStart := time.Now().Add(2*time.Hour), time.Now().Add(3*time.Hour), time.Now().Add(4*time.Hour)
 
 	got, err := ToBuild(v1alpha1.TaskRun{
@@ -410,27 +407,14 @@ func TestToBuild_MoreSteps(t *testing.T) {
 			},
 			Steps: []v1alpha1.StepState{{
 				ContainerState: corev1.ContainerState{
-					// implicit step!
-					Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(implicitOneStart)},
-				},
-			}, {
-				ContainerState: corev1.ContainerState{
-					// another implicit step!
-					Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(implicitTwoStart)},
-				},
-			}, {
-				ContainerState: corev1.ContainerState{
-					// actual step one
 					Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(stepOneStart)},
 				},
 			}, {
 				ContainerState: corev1.ContainerState{
-					// actual step two
 					Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(stepTwoStart)},
 				},
 			}, {
 				ContainerState: corev1.ContainerState{
-					// actual step three
 					Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(stepThreeStart)},
 				},
 			}},
@@ -441,9 +425,7 @@ func TestToBuild_MoreSteps(t *testing.T) {
 	}
 
 	// NB: This build doesn't actually make sense (you wouldn't have three running
-	// steps at the same time), but it demonstrates that the input Build CRD has
-	// the last three step states applied to the build's actual three steps, and
-	// ignores the implicit step states.
+	// steps at the same time).
 	want := &gcb.Build{
 		Id:     buildID,
 		Status: SUCCESS,

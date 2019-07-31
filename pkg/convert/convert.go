@@ -46,6 +46,9 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 		return nil, ErrIncompatible
 	}
 	out := &v1alpha1.TaskRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{},
+		},
 		Spec: v1alpha1.TaskRunSpec{
 			TaskSpec: &v1alpha1.TaskSpec{},
 		},
