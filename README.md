@@ -27,6 +27,8 @@ KO_DOCKER_REPO=gcr.io/my-gcp-project
 ko apply -f config/
 ```
 
+**TODO: Real versioned release YAMLs**
+
 This builds and deploys the replicated Kubernetes Service behind a Load
 Balancer, all in the namespace `gcb-compat`, running as the Kubernetes Service
 Account `gcb-compat-account`.
@@ -44,6 +46,9 @@ kubectl annotate serviceaccount \
   --namespace gcb-compat \
   gcb-compat-account \
   iam.gke.io/gcp-service-account=gcb-compat@${PROJECT_ID}.iam.gserviceaccount.com
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member serviceAccount:gcb-compat@${PROJECT_ID}.iam.gserviceaccount.com \
+  --role roles/storage.objectCreator
 ```
 
 This creates a GCP Service Account ("GSA") and grants the `gcb-compat-account`
@@ -67,6 +72,9 @@ use that service instead of the regular GCB API service:
 SERVICE_IP=$(kubectl get service gcb-compat-service -n gcb-compat -ojsonpath="{.status.loadBalancer.ingress[0].ip})"
 export CLOUDSDK_API_ENDPOINT_OVERRIDES_CLOUDBUILD=http://${SERVICE_IP}/
 ```
+
+**NB:** It might take a minute or two for the Service to get its IP right after
+you create it.
 
 Now we'll tell `gcloud` to run a simple build:
 

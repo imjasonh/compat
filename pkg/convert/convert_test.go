@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ImJasonH/compat/pkg/constants"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
@@ -34,6 +35,10 @@ import (
 const (
 	buildID = "build-id"
 )
+
+func init() {
+	constants.ProjectID = "project-id"
+}
 
 func TestIncompatibleToTaskRun(t *testing.T) {
 	for _, b := range []*gcb.Build{{
@@ -220,6 +225,24 @@ func TestToBuild(t *testing.T) {
 			CreationTimestamp: createTime,
 		},
 		Spec: v1alpha1.TaskRunSpec{
+			Inputs: v1alpha1.TaskRunInputs{
+				Resources: []v1alpha1.TaskResourceBinding{{
+					Name: "source",
+					ResourceSpec: &v1alpha1.PipelineResourceSpec{
+						Type: v1alpha1.PipelineResourceTypeStorage,
+						Params: []v1alpha1.Param{{
+							Name:  "location",
+							Value: "gs://my-bucket/my-object.tar.gz#12345",
+						}, {
+							Name:  "artifactType",
+							Value: string(v1alpha1.GCSArchive),
+						}, {
+							Name:  "type",
+							Value: "build-gcs",
+						}},
+					},
+				}},
+			},
 			TaskSpec: &v1alpha1.TaskSpec{
 				Steps: []corev1.Container{{
 					Image:      "success",
@@ -292,9 +315,15 @@ func TestToBuild(t *testing.T) {
 	want := &gcb.Build{
 		Id:         buildID,
 		Status:     SUCCESS,
+		LogsBucket: "gs://project-id_cloudbuild/",
 		CreateTime: create.Format(time.RFC3339),
 		StartTime:  start.Format(time.RFC3339),
 		FinishTime: end.Format(time.RFC3339),
+		Source: &gcb.Source{StorageSource: &gcb.StorageSource{
+			Bucket:     "my-bucket",
+			Object:     "my-object.tar.gz",
+			Generation: 12345,
+		}},
 		Steps: []*gcb.BuildStep{{
 			Name:       "success",
 			Id:         "id",
@@ -381,6 +410,7 @@ func TestToBuild_Status(t *testing.T) {
 }
 
 func TestToBuild_MoreSteps(t *testing.T) {
+	sourceFetchStart, sourceFetchFinish := time.Now(), time.Now().Add(3*time.Minute)
 	stepOneStart, stepTwoStart, stepThreeStart := time.Now().Add(2*time.Hour), time.Now().Add(3*time.Hour), time.Now().Add(4*time.Hour)
 
 	got, err := ToBuild(v1alpha1.TaskRun{
@@ -406,6 +436,16 @@ func TestToBuild_MoreSteps(t *testing.T) {
 				}},
 			},
 			Steps: []v1alpha1.StepState{{
+				ContainerName: "create-dir-source-blahblahblah",
+			}, {
+				ContainerName: "storage-fetch-source-blahblahblah",
+				ContainerState: corev1.ContainerState{
+					Terminated: &corev1.ContainerStateTerminated{
+						StartedAt:  metav1.NewTime(sourceFetchStart),
+						FinishedAt: metav1.NewTime(sourceFetchFinish),
+					},
+				},
+			}, {
 				ContainerState: corev1.ContainerState{
 					Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(stepOneStart)},
 				},
@@ -427,8 +467,9 @@ func TestToBuild_MoreSteps(t *testing.T) {
 	// NB: This build doesn't actually make sense (you wouldn't have three running
 	// steps at the same time).
 	want := &gcb.Build{
-		Id:     buildID,
-		Status: SUCCESS,
+		Id:         buildID,
+		Status:     SUCCESS,
+		LogsBucket: "gs://project-id_cloudbuild/",
 		Steps: []*gcb.BuildStep{{
 			Name:   "one",
 			Timing: &gcb.TimeSpan{StartTime: stepOneStart.Format(time.RFC3339)},
@@ -443,6 +484,12 @@ func TestToBuild_MoreSteps(t *testing.T) {
 			Status: WORKING,
 		}},
 		Results: &gcb.Results{},
+		Timing: map[string]gcb.TimeSpan{
+			"FETCHSOURCE": gcb.TimeSpan{
+				StartTime: sourceFetchStart.Format(time.RFC3339),
+				EndTime:   sourceFetchFinish.Format(time.RFC3339),
+			},
+		},
 	}
 	if diff := jsondiff(got, want); diff != "" {
 		t.Fatalf("Got diff: %s", diff)

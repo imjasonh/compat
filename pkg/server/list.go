@@ -20,14 +20,13 @@ import (
 	"log"
 
 	"github.com/ImJasonH/compat/pkg/convert"
-	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func list(projectID string, client v1alpha1.TaskRunInterface) (*gcb.ListBuildsResponse, error) {
+func (s *Server) list() (*gcb.ListBuildsResponse, error) {
 	log.Println("Listing Builds...")
-	resp, err := client.List(metav1.ListOptions{})
+	resp, err := s.client.List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

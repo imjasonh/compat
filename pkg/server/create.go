@@ -19,14 +19,13 @@ package server
 import (
 	"log"
 
-	"github.com/ImJasonH/compat/constants"
+	"github.com/ImJasonH/compat/pkg/constants"
 	"github.com/ImJasonH/compat/pkg/convert"
 	"github.com/google/uuid"
-	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
 )
 
-func create(b *gcb.Build, client v1alpha1.TaskRunInterface) (*gcb.Build, error) {
+func (s *Server) create(b *gcb.Build) (*gcb.Build, error) {
 	log.Println("Creating Build...")
 	tr, err := convert.ToTaskRun(b)
 	if err != nil {
@@ -34,9 +33,16 @@ func create(b *gcb.Build, client v1alpha1.TaskRunInterface) (*gcb.Build, error) 
 	}
 	tr.Name = uuid.New().String()                         // Generate the build ID.
 	tr.Spec.ServiceAccount = constants.ServiceAccountName // Run as the Workload Identity KSA/GSA
-	tr, err = client.Create(tr)
+	tr, err = s.client.Create(tr)
 	if err != nil {
 		return nil, err
 	}
+
+	go func() {
+		if err := s.logCopier.Copy(tr.Name); err != nil {
+			log.Printf("Error copying logs for build %q: %v", tr.Name, err)
+		}
+	}()
+
 	return convert.ToBuild(*tr)
 }

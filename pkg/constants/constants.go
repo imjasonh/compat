@@ -17,6 +17,8 @@ limitations under the License.
 // Package constants provides constants used by many packages.
 package constants
 
+import "fmt"
+
 const (
 	// Namespace is the K8s namespace the service expects to run in.
 	Namespace = "gcb-compat"
@@ -25,3 +27,12 @@ const (
 	// to run as, and which it runs TaskRuns as.
 	ServiceAccountName = "gcb-compat-account"
 )
+
+var (
+	// ProjectID is the ID of the project running this service, as
+	// determined at server startup.
+	ProjectID = ""
+)
+
+// LogsBucket returns the only supported logs bucket, based on the project ID.
+func LogsBucket() string { return fmt.Sprintf("%s_cloudbuild", ProjectID) }

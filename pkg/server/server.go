@@ -21,17 +21,28 @@ import (
 	"log"
 	"net/http"
 
+	"cloud.google.com/go/storage"
+	"github.com/ImJasonH/compat/pkg/logs"
 	"github.com/julienschmidt/httprouter"
-	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
+	typedv1alpha1 "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 type Server struct {
-	client v1alpha1.TaskRunInterface
+	client    typedv1alpha1.TaskRunInterface
+	logCopier logs.LogCopier
 }
 
-func New(client v1alpha1.TaskRunInterface) *Server {
-	return &Server{client}
+func New(client typedv1alpha1.TaskRunInterface, podClient typedcorev1.PodExpansion, gcs *storage.Client) *Server {
+	return &Server{
+		client: client,
+		logCopier: logs.LogCopier{
+			Client:    client,
+			PodClient: podClient,
+			GCS:       gcs,
+		},
+	}
 }
 
 func httpError(w http.ResponseWriter, err error) {
@@ -43,8 +54,9 @@ func httpError(w http.ResponseWriter, err error) {
 func (s *Server) ListBuilds(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	projectID := ps.ByName("projectID")
 	log.Printf("ListBuilds for project %q", projectID)
+	// TODO: Check if projectID == constants.ProjectID
 
-	resp, err := list(projectID, s.client)
+	resp, err := s.list()
 	if err != nil {
 		httpError(w, err)
 		return
@@ -57,6 +69,7 @@ func (s *Server) ListBuilds(w http.ResponseWriter, r *http.Request, ps httproute
 func (s *Server) CreateBuild(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	projectID := ps.ByName("projectID")
 	log.Printf("CreateBuild for project %q", projectID)
+	// TODO: Check if projectID == constants.ProjectID
 
 	b := &gcb.Build{}
 	defer r.Body.Close()
@@ -65,7 +78,7 @@ func (s *Server) CreateBuild(w http.ResponseWriter, r *http.Request, ps httprout
 		return
 	}
 
-	b, err := create(b, s.client)
+	b, err := s.create(b)
 	if err != nil {
 		httpError(w, err)
 		return
@@ -78,8 +91,9 @@ func (s *Server) CreateBuild(w http.ResponseWriter, r *http.Request, ps httprout
 func (s *Server) GetBuild(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	buildID := ps.ByName("buildID")
 	log.Printf("GetBuild for build %q", buildID)
+	// TODO: Check if projectID == constants.ProjectID
 
-	b, err := get(buildID, s.client)
+	b, err := s.get(buildID)
 	if err != nil {
 		httpError(w, err)
 		return

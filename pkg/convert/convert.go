@@ -22,9 +22,11 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/ImJasonH/compat/pkg/constants"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -164,8 +166,9 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 // representation, or an error if conversion failed.
 func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 	out := &gcb.Build{
-		Id:      tr.ObjectMeta.Name,
-		Results: &gcb.Results{},
+		Id:         tr.ObjectMeta.Name,
+		Results:    &gcb.Results{},
+		LogsBucket: fmt.Sprintf("gs://%s/", constants.LogsBucket()),
 	}
 	if tr.Spec.TaskSpec == nil {
 		return nil, ErrIncompatible
@@ -202,6 +205,26 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 		})
 	}
 
+	if len(tr.Spec.Inputs.Resources) > 0 {
+		if r := tr.Spec.Inputs.Resources[0].ResourceSpec; r != nil && r.Type == v1alpha1.PipelineResourceTypeStorage {
+			parts := strings.Split(tr.Spec.Inputs.Resources[0].ResourceSpec.Params[0].Value, "/")
+			bucket, object := parts[2], parts[3]
+			var generation int64
+			if strings.Contains(object, "#") {
+				parts = strings.Split(object, "#")
+				object = parts[0]
+				generation, _ = strconv.ParseInt(parts[1], 10, 64)
+			}
+			out.Source = &gcb.Source{StorageSource: &gcb.StorageSource{
+				Bucket:     bucket,
+				Object:     object,
+				Generation: generation,
+			}}
+
+		}
+
+	}
+
 	cond := tr.Status.GetCondition(apis.ConditionSucceeded)
 	switch {
 	case cond == nil:
@@ -224,7 +247,22 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 		out.FinishTime = tr.Status.CompletionTime.Time.Format(time.RFC3339)
 	}
 
-	// TODO(jasonhall): build.Timing for FETCHSOURCE and BUILD (no PUSH)
+	out.Timing = map[string]gcb.TimeSpan{}
+	if len(tr.Status.Steps) > len(tr.Spec.TaskSpec.Steps) {
+		// Collect FETCHSOURCE timing.
+		if len(tr.Status.Steps) > 2 &&
+			strings.HasPrefix(tr.Status.Steps[1].ContainerName, "storage-fetch-source-") {
+			ts := gcb.TimeSpan{}
+			if term := tr.Status.Steps[1].Terminated; term != nil {
+				ts.StartTime = term.StartedAt.Time.Format(time.RFC3339)
+				ts.EndTime = term.FinishedAt.Time.Format(time.RFC3339)
+			} else if run := tr.Status.Steps[1].Running; run != nil {
+				ts.StartTime = run.StartedAt.Time.Format(time.RFC3339)
+			}
+			out.Timing["FETCHSOURCE"] = ts
+		}
+		tr.Status.Steps = tr.Status.Steps[2:]
+	}
 
 	for i, state := range tr.Status.Steps {
 		if term := state.Terminated; term != nil {
