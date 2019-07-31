@@ -109,3 +109,18 @@ steps:
 ```
 
 🎉🎉🎉
+
+
+## Cleaning up
+
+To tear down the Service running on the cluster:
+
+```
+kubectl delete -f config/
+```
+
+To delete the IAM Service Account:
+
+```
+gcloud iam service-accounts delete gcb-compat@${PROJECT_ID}.iam.gserviceaccount.com
+```
