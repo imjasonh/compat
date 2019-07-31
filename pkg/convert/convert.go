@@ -220,12 +220,9 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 		out.Status = SUCCESS
 	}
 
-	// TODO(jasonhall): the CRD's status.creationTime is available, but could
-	// conflict with the Build's existing create_time, since creationTime is the
-	// time the build was first requested on the cluster. This data might be
-	// useful, to track latency between user request and cluster request, but
-	// there's no field in the proto to store this at this time.
-
+	if !tr.ObjectMeta.CreationTimestamp.IsZero() {
+		out.CreateTime = tr.ObjectMeta.CreationTimestamp.Time.Format(time.RFC3339)
+	}
 	if !tr.Status.StartTime.IsZero() {
 		out.StartTime = tr.Status.StartTime.Time.Format(time.RFC3339)
 	}

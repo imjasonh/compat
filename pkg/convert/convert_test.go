@@ -205,9 +205,10 @@ func jsondiff(l, r interface{}) string {
 	return ""
 }
 func TestToBuild(t *testing.T) {
-	start := time.Now()
+	create := time.Now()
+	start := create.Add(3 * time.Second)
 	end := start.Add(time.Minute)
-	startTime, endTime := metav1.NewTime(start), metav1.NewTime(end)
+	createTime, startTime, endTime := metav1.NewTime(create), metav1.NewTime(start), metav1.NewTime(end)
 	output := "This is my output"
 	outputBytes := make([]byte, base64.StdEncoding.EncodedLen(len(output)))
 	base64.StdEncoding.Encode(outputBytes, []byte(output))
@@ -218,6 +219,7 @@ func TestToBuild(t *testing.T) {
 			Annotations: map[string]string{
 				"entrypoint-0": "foo",
 			},
+			CreationTimestamp: createTime,
 		},
 		Spec: v1alpha1.TaskRunSpec{
 			TaskSpec: &v1alpha1.TaskSpec{
@@ -292,6 +294,7 @@ func TestToBuild(t *testing.T) {
 	want := &gcb.Build{
 		Id:         buildID,
 		Status:     SUCCESS,
+		CreateTime: create.Format(time.RFC3339),
 		StartTime:  start.Format(time.RFC3339),
 		FinishTime: end.Format(time.RFC3339),
 		Steps: []*gcb.BuildStep{{

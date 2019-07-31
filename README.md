@@ -9,15 +9,23 @@ KO_DOCKER_REPO=gcr.io/my-gcp-project
 ko apply -f config/
 ```
 
+This builds and deploys the replicated service behind a load balancer.
+
 ## Testing
 
-First, we'll tell gcloud to talk to the Service running on the cluster:
+First, get the address of the load balancer created above:
+
+```
+$ SERVICE_IP=$(kubectl get service gcb-compat-service -n gcb-compat -ojsonpath="{.status.loadBalancer.ingress[0].ip})"
+```
+
+Then, we'll tell `gcloud` to talk to that IP instead of the regular GCB API:
 
 ```
 $ export CLOUDSDK_API_ENDPOINT_OVERRIDES_CLOUDBUILD=http://$SERVICE_IP/
 ```
 
-Then we'll tell gcloud to run a simple build:
+Now we'll tell `gcloud` to run a simple build:
 
 ```
 cat > cloudbuild.yaml << EOF
@@ -28,7 +36,7 @@ EOF
 gcloud builds submit --no-source
 ```
 
-This currently fails with a panic in gcloud (😅), but the build started!
+This currently fails with a panic in `gcloud` (😅), but the build started!
 
 ```
 $ gcloud builds list
