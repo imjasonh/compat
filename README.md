@@ -20,7 +20,6 @@ A partial list:
 - [ ] Resolve GCS source provenance at Build creation time
 - [ ] Support container image outputs, report built image digests
 - [ ] Report build step image digests
-- [ ] Generate LogUrl
 - [ ] CancelBuild
 
 ### Differences
@@ -64,6 +63,9 @@ including:
 * Builds share VM node resources ("bin-packing") for more effective resource
   use, and nodes can be configured for
   [autoscaling](https://cloud.google.com/kubernetes-engine/docs/concepts/cluster-autoscaler).
+* Builds are run as Pods on the cluster, and export resource usage metrics (CPU,
+  RAM, etc.) to [Stackdriver
+  Monitoring](https://cloud.google.com/monitoring/kubernetes-engine/).
 
 ### Supported features
 

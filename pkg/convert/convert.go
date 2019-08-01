@@ -288,12 +288,16 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 		}
 	}
 
+	if podName := tr.Status.PodName; podName != "" {
+		out.LogUrl = fmt.Sprintf(logURLFmt, constants.ProjectID, constants.ProjectID, podName)
+	}
 	return out, nil
 }
 
 const (
-	WORKING = "WORKING"
-	SUCCESS = "SUCCESS"
-	FAILURE = "FAILURE"
-	QUEUED  = "QUEUED"
+	logURLFmt = `https://console.cloud.google.com/logs/viewer?project=%s&advancedFilter=resource.type%%3D"container"%%0Aresource.labels.namespace_id%%3D"gcb-compat"%%0Aresource.labels.project_id%%3D"%s"%%0Aresource.labels.pod_id%%3D"%s"`
+	WORKING   = "WORKING"
+	SUCCESS   = "SUCCESS"
+	FAILURE   = "FAILURE"
+	QUEUED    = "QUEUED"
 )

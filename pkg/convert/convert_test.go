@@ -19,6 +19,7 @@ package convert
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -271,6 +272,7 @@ func TestToBuild(t *testing.T) {
 			},
 		},
 		Status: v1alpha1.TaskRunStatus{
+			PodName: "my-cool-pod-name",
 			Status: duck.Status{
 				Conditions: []apis.Condition{{
 					Type:   apis.ConditionSucceeded,
@@ -318,6 +320,7 @@ func TestToBuild(t *testing.T) {
 		ProjectId:  constants.ProjectID,
 		Status:     SUCCESS,
 		LogsBucket: "gs://project-id_cloudbuild",
+		LogUrl:     fmt.Sprintf(logURLFmt, "project-id", "project-id", "my-cool-pod-name"),
 		CreateTime: create.Format(time.RFC3339),
 		StartTime:  start.Format(time.RFC3339),
 		FinishTime: end.Format(time.RFC3339),
