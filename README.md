@@ -53,12 +53,16 @@ A partial list:
 
 ### New Features
 
-Because builds execute on a GKE cluster, a number of things are now possible, including:
+Because builds execute on a GKE cluster, a number of things are now possible,
+including:
 
-* Access to resources on the cluster's private VPC network.
-* The cluster can be configured to only be visible to authorized VPC networks.
-* Builds share VM nodes ("bin-packing") and nodes can be configured for
-  autoscaling.
+* Access to resources on the cluster's [private VPC
+  network](https://cloud.google.com/kubernetes-engine/docs/how-to/cluster-shared-vpc).
+* The cluster can be configured to [only be visible to authorized VPC
+  networks](https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters).
+* Builds share VM node resources ("bin-packing") for more effective resource
+  use, and nodes can be configured for
+  [autoscaling](https://cloud.google.com/kubernetes-engine/docs/concepts/cluster-autoscaler).
 
 ### Supported features
 
