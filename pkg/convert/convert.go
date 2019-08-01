@@ -30,6 +30,7 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 )
@@ -40,6 +41,21 @@ import (
 // TODO(jasonhall): If this error becomes user-facing, give details about why
 // the build is incompatible with on-cluster execution.
 var ErrIncompatible = errors.New("Build is incompatible with on-cluster execution")
+
+var defaultResources = corev1.ResourceList{
+	corev1.ResourceCPU:    resource.MustParse("1"),
+	corev1.ResourceMemory: resource.MustParse("3.75Gi"),
+}
+var resourceMapping = map[string]corev1.ResourceList{
+	"N1_HIGHCPU_8": corev1.ResourceList{
+		corev1.ResourceCPU:    resource.MustParse("8"),
+		corev1.ResourceMemory: resource.MustParse("7.2Gi"),
+	},
+	"N1_HIGHCPU_32": corev1.ResourceList{
+		corev1.ResourceCPU:    resource.MustParse("32"),
+		corev1.ResourceMemory: resource.MustParse("28.8Gi"),
+	},
+}
 
 // ToTaskRun returns the on-cluster representation of the given Build proto message,
 // or ErrIncompatible if the build is not compatible with on-cluster execution.
@@ -65,8 +81,21 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 		out.Spec.Timeout = &metav1.Duration{d}
 	}
 
-	allVols := map[string]corev1.Volume{}
+	resources := corev1.ResourceRequirements{Requests: defaultResources}
+	if b.Options != nil {
+		if b.Options.MachineType != "" {
+			rq, found := resourceMapping[b.Options.MachineType]
+			if !found {
+				return nil, ErrIncompatible
+			}
+			resources = corev1.ResourceRequirements{Requests: rq}
+		}
+		if b.Options.DiskSizeGb != 0 {
+			resources.Requests[corev1.ResourceEphemeralStorage] = resource.MustParse(fmt.Sprintf("%dGi", b.Options.DiskSizeGb))
+		}
+	}
 
+	allVols := map[string]corev1.Volume{}
 	for idx, s := range b.Steps {
 		// These features are not supported.
 		if len(s.WaitFor) != 0 || len(s.SecretEnv) != 0 || s.Timeout != "" {
@@ -110,14 +139,17 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 			}
 		}
 
-		out.Spec.TaskSpec.Steps = append(out.Spec.TaskSpec.Steps, corev1.Container{
+		cont := corev1.Container{
 			Image:        s.Name,
 			Name:         s.Id,
 			WorkingDir:   s.Dir,
 			Command:      cmd,
 			Env:          env,
 			VolumeMounts: volMounts,
-		})
+			Resources:    resources,
+		}
+
+		out.Spec.TaskSpec.Steps = append(out.Spec.TaskSpec.Steps, cont)
 	}
 
 	// Specify all the volumes used by all steps.
@@ -175,6 +207,7 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 	if tr.Spec.TaskSpec == nil {
 		return nil, ErrIncompatible
 	}
+
 	for idx, s := range tr.Spec.TaskSpec.Steps {
 		var env []string
 		for _, e := range s.Env {

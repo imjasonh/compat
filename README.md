@@ -30,10 +30,13 @@ A partial list:
 * Because builds are translated to Tekton `TaskRun`s and executed on the
   cluster, any user with permission to delete `TaskRun`s on the cluster can
   modify build history.
+* By default, builds don't specify a disk resource request, and so are given
+  whatever default disk resources are available on the node. To specify disk
+  resource needs, specify `diskSizeGb`.
 
 ### Limitations
 
-* The compatibility service only runs on GKE.
+* The service is only intended to run on GKE.
 * Builds cannot access the Docker socket, e.g., to run `docker build` or
   `docker run`.
 * Builds can only be requested for the project where the cluster itself is
@@ -44,7 +47,6 @@ A partial list:
 * Only GCS source is supported at this time.
 * Lines in build logs are not prefixed with the step number at this time.
 * Substitutions are not supported at this time.
-* `machineType` and `diskSizeGb` are unsupported at this time.
 
 ### Incompatibilities
 
@@ -61,7 +63,9 @@ including:
 * The cluster can be configured to [only be visible to authorized VPC
   networks](https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters).
 * Builds share VM node resources ("bin-packing") for more effective resource
-  use, and nodes can be configured for
+  use. This also has benefits to builder image pull latency, since some images
+  may already be available from previous builds.
+* Nodes can be configured for
   [autoscaling](https://cloud.google.com/kubernetes-engine/docs/concepts/cluster-autoscaler).
 * Builds are run as Pods on the cluster, and export resource usage metrics (CPU,
   RAM, etc.) to [Stackdriver
@@ -77,6 +81,11 @@ including:
 * Builder service accoount auth: builds can access GCP resources as
   `gcb-compat@[PROJECT_ID].iam.gserviceaccount.com`
 * Cross-step volume mounts
+* `machineType` and `diskSizeGb` are translated into Kubernetes resource
+  requests -- if the cluster's nodes have insufficient available resources,
+  builds will queue. Consider enabling GKE's [node
+  auto-provisioning](https://cloud.google.com/kubernetes-engine/docs/how-to/node-auto-provisioning)
+  to automatically create nodes of the correct size to handle these builds.
 
 ## Setup
 

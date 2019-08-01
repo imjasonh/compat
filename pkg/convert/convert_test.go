@@ -28,6 +28,7 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 	duck "knative.dev/pkg/apis/duck/v1beta1"
@@ -68,6 +69,9 @@ func TestIncompatibleToTaskRun(t *testing.T) {
 		Source: &gcb.Source{RepoSource: &gcb.RepoSource{
 			BranchName: "master",
 		}},
+	}, {
+		Id:      "bad machine type",
+		Options: &gcb.BuildOptions{MachineType: "NONSENSE"},
 	}} {
 		if _, err := ToTaskRun(b); err != ErrIncompatible {
 			t.Errorf("ToTaskRun(%q): got %v, want incompatible", b.Id, err)
@@ -149,6 +153,10 @@ func TestToTaskRun(t *testing.T) {
 						Name:      "bar",
 						MountPath: "/bar",
 					}},
+					Resources: corev1.ResourceRequirements{Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("1"),
+						corev1.ResourceMemory: resource.MustParse("3.75Gi"),
+					}},
 				}, {
 					Image:   "busybox",
 					Command: []string{"true"},
@@ -156,6 +164,7 @@ func TestToTaskRun(t *testing.T) {
 						Name:      "foo",
 						MountPath: "/something/else",
 					}},
+					Resources: corev1.ResourceRequirements{Requests: defaultResources},
 				}},
 				Volumes: []corev1.Volume{{
 					Name:         "bar",
@@ -190,6 +199,40 @@ func TestToTaskRun(t *testing.T) {
 	}
 }
 
+// TestToTaskRun_Resources tests conversion of build requests that specify a
+// machine_type and custom disk size.
+func TestToTaskRun_Resources(t *testing.T) {
+	build, err := ToTaskRun(&gcb.Build{
+		Steps: []*gcb.BuildStep{{Name: "ubuntu"}},
+		Options: &gcb.BuildOptions{
+			MachineType: "N1_HIGHCPU_32",
+			DiskSizeGb:  500,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ToTaskRun: %v", err)
+	}
+	wantTaskRun := &v1alpha1.TaskRun{
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec: v1alpha1.TaskRunSpec{
+			ServiceAccount: constants.ServiceAccountName,
+			TaskSpec: &v1alpha1.TaskSpec{
+				Steps: []corev1.Container{{
+					Image: "ubuntu",
+					Resources: corev1.ResourceRequirements{Requests: corev1.ResourceList{
+						corev1.ResourceCPU:              resource.MustParse("32"),
+						corev1.ResourceMemory:           resource.MustParse("28.8Gi"),
+						corev1.ResourceEphemeralStorage: resource.MustParse("500Gi"),
+					}},
+				}},
+			},
+		},
+	}
+	if diff := jsondiff(build, wantTaskRun); diff != "" {
+		t.Errorf("ToTaskRun build diff: %s", diff)
+	}
+}
+
 func jsondiff(l, r interface{}) string {
 	lb, err := json.MarshalIndent(l, "", " ")
 	if err != nil {
@@ -209,6 +252,7 @@ func jsondiff(l, r interface{}) string {
 	}
 	return ""
 }
+
 func TestToBuild(t *testing.T) {
 	create := time.Now()
 	start := create.Add(3 * time.Second)
