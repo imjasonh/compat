@@ -21,6 +21,7 @@ A partial list:
 - [ ] Support container image outputs, report built image digests
 - [ ] Report build step image digests
 - [ ] CancelBuild
+- [ ] Real versioned release YAMLs
 
 ### Differences
 
@@ -94,18 +95,25 @@ Prerequisites:
 1. A GKE cluster with [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) enabled.
 1. A working Tekton installation on the cluster.
 
-With those prerequisites satisfied, install the GCB compatibility service:
+If you don't already have a cluster, this will create one and install the latest
+Tekton release:
 
 ```
-KO_DOCKER_REPO=gcr.io/my-gcp-project
-ko apply -f config/
+PROJECT_ID=$(gcloud config get-value project)
+ZONE=us-east4-a
+gcloud beta container clusters create new-cluster --zone=${ZONE} \
+  --machine-type=n1-standard-4 --num-nodes=3 \
+  --identity-namespace=${PROJECT_ID}.svc.id.goog
+gcloud container clusters get-credentials new-cluster --zone=${ZONE}
+kubectl apply --filename https://storage.googleapis.com/tekton-releases/latest/release.yaml
 ```
 
-**TODO: Real versioned release YAMLs**
+With those prerequisites satisfied, create the Kubernetes service account:
 
-This builds and deploys the replicated Kubernetes Service behind a Load
-Balancer, all in the namespace `gcb-compat`, running as the Kubernetes Service
-Account `gcb-compat-account`.
+```
+KO_DOCKER_REPO=gcr.io/${PROJECT_ID}
+ko apply -f config/100-serviceaccount.yaml
+```
 
 Next, set up Workload Identity:
 
@@ -122,11 +130,22 @@ kubectl annotate serviceaccount \
   iam.gke.io/gcp-service-account=gcb-compat@${PROJECT_ID}.iam.gserviceaccount.com
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
   --member serviceAccount:gcb-compat@${PROJECT_ID}.iam.gserviceaccount.com \
-  --role roles/storage.storageAdmin
+  --role roles/storage.admin
 ```
 
 This creates a GCP Service Account ("GSA") and grants the `gcb-compat-account`
 Kubernetes Service Account (KSA) permission to act as that GSA.
+
+Now, install the full service:
+
+```
+KO_DOCKER_REPO=gcr.io/${PROJECT_ID}
+ko apply -f config/
+```
+
+This builds and deploys the replicated Kubernetes Service behind a Load
+Balancer, all in the namespace `gcb-compat`, running as the Kubernetes Service
+Account `gcb-compat-account`.
 
 At this point, you can grant any desired GCP IAM roles to the service account.
 For instance, to give the GSA permission to view GCB builds:
@@ -143,7 +162,7 @@ First, get the address of the load balancer created above, and tell `gcloud` to
 use that service instead of the regular GCB API service:
 
 ```
-SERVICE_IP=$(kubectl get service gcb-compat-service -n gcb-compat -ojsonpath="{.status.loadBalancer.ingress[0].ip})"
+SERVICE_IP=$(kubectl get service gcb-compat-service -n gcb-compat -ojsonpath="{.status.loadBalancer.ingress[0].ip}")
 export CLOUDSDK_API_ENDPOINT_OVERRIDES_CLOUDBUILD=http://${SERVICE_IP}/
 ```
 
@@ -188,6 +207,15 @@ steps:
   timing:
     endTime: '2019-07-30T20:50:39Z'
     startTime: '2019-07-30T20:50:38Z'
+```
+
+Now we can get its logs:
+
+```
+$ gcloud builds log c13efb20-cc33-4c4e-b605-2595cca63791
+----------------------------------- REMOTE BUILD OUTPUT ----------------------------------
+hello
+------------------------------------------------------------------------------------------
 ```
 
 🎉🎉🎉
