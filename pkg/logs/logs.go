@@ -1,12 +1,10 @@
 package logs
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log"
 
-	"cloud.google.com/go/storage"
 	"github.com/ImJasonH/compat/pkg/constants"
 	"github.com/ImJasonH/compat/pkg/convert"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
@@ -20,10 +18,15 @@ import (
 type LogCopier struct {
 	Client    typedv1alpha1.TaskRunInterface
 	PodClient typedcorev1.PodExpansion
-	GCS       *storage.Client
 }
 
 func (l LogCopier) Copy(name string) error {
+	objectName := fmt.Sprintf("log-%s.txt", name)
+	w, err := NewWriter(constants.LogsBucket(), objectName)
+	if err != nil {
+		return err
+	}
+
 	// First, wait until the TaskRun is done.
 	watcher, err := l.Client.Watch(metav1.SingleObject(metav1.ObjectMeta{
 		Name:      name,
@@ -63,9 +66,6 @@ func (l LogCopier) Copy(name string) error {
 	}
 
 	// Then, copy the logs for each container in the TaskRun's pods.
-	ctx := context.Background()
-	objectName := fmt.Sprintf("log-%s.txt", name)
-	w := l.GCS.Bucket(constants.LogsBucket()).Object(objectName).NewWriter(ctx)
 	for _, containerName := range containerNames {
 		log.Printf("getting logs for pod %q container %q", podName, containerName)
 		rs, err := l.PodClient.GetLogs(podName, &corev1.PodLogOptions{
@@ -80,9 +80,6 @@ func (l LogCopier) Copy(name string) error {
 		if err := rs.Close(); err != nil {
 			return fmt.Errorf("Error closing K8s logs stream: %v", err)
 		}
-	}
-	if err := w.Close(); err != nil {
-		return fmt.Errorf("Error closing GCS object: %v", err)
 	}
 	return nil
 }

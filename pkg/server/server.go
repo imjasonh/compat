@@ -17,17 +17,14 @@ limitations under the License.
 package server
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 
 	"cloud.google.com/go/compute/metadata"
-	"cloud.google.com/go/storage"
 	"github.com/ImJasonH/compat/pkg/constants"
 	"github.com/ImJasonH/compat/pkg/logs"
 	"github.com/julienschmidt/httprouter"
@@ -43,13 +40,12 @@ type Server struct {
 	logCopier logs.LogCopier
 }
 
-func New(client typedv1alpha1.TaskRunInterface, podClient typedcorev1.PodExpansion, gcs *storage.Client) *Server {
+func New(client typedv1alpha1.TaskRunInterface, podClient typedcorev1.PodExpansion) *Server {
 	return &Server{
 		client: client,
 		logCopier: logs.LogCopier{
 			Client:    client,
 			PodClient: podClient,
-			GCS:       gcs,
 		},
 	}
 }
@@ -87,9 +83,7 @@ func (s *Server) Preflight() error {
 
 	// GSA can write to the logs bucket:
 	logsBucket := constants.LogsBucket()
-	w := s.logCopier.GCS.Bucket(logsBucket).Object("preflight").NewWriter(context.Background())
-	io.WriteString(w, "hello")
-	if err := w.Close(); err != nil {
+	if _, err := logs.NewWriter(logsBucket, "preflight"); err != nil {
 		return fmt.Errorf("object.NewWriter: cannot write preflight object to logs bucket %q: %v", logsBucket, err)
 	}
 	log.Println("✔️ Service can write to GCS logs bucket")

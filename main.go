@@ -17,12 +17,10 @@ limitations under the License.
 package main // import "github.com/ImJasonH/compat"
 
 import (
-	"context"
 	"flag"
 	"log"
 	"net/http"
 
-	"cloud.google.com/go/storage"
 	"github.com/ImJasonH/compat/pkg/constants"
 	"github.com/ImJasonH/compat/pkg/server"
 	"github.com/julienschmidt/httprouter"
@@ -39,14 +37,10 @@ func main() {
 		log.Fatalf("InClusterConfig: %v", err)
 	}
 	client := versioned.NewForConfigOrDie(cfg).TektonV1alpha1().TaskRuns(constants.Namespace)
-	gcs, err := storage.NewClient(context.Background())
-	if err != nil {
-		log.Fatalf("storage.NewClient: %v", err)
-	}
 
 	podClient := typedcorev1.NewForConfigOrDie(cfg).Pods(constants.Namespace)
 
-	srv := server.New(client, podClient, gcs)
+	srv := server.New(client, podClient)
 	if err := srv.Preflight(); err != nil {
 		log.Fatalf("❌ Preflight check failed: %v", err)
 	}
