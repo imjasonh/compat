@@ -1,17 +1,73 @@
 # GCB Compatibility for Tekton
 
-This is a work in progress
+**This is an experimental work in progress**
+
+This project provides a Kubernetes service that can be installed on a
+[Tekton](https://tekton.dev)-enabled GKE cluster to emulate the [Google Cloud
+Build](https://cloud.google.com/cloud-build) service. The aim is to support the
+full [`gcloud builds
+...`](https://cloud.google.com/sdk/gcloud/reference/builds/) CLI surface, with
+some useful [new features](#new-features), but with some necessary
+[limitations](#limitations), [incompatibilitiies](#incompatibilities) and
+assorted [differences](#differences).
 
 ## TODOs
 
 A partial list:
 
-- [ ] Authorizing API requests
+- [ ] Support .tgz source archives uploaded from gcloud
 - [ ] Streaming logs to GCS
 - [ ] Resolve GCS source provenance at Build creation time
 - [ ] Support container image outputs, report built image digests
 - [ ] Report build step image digests
 - [ ] Generate LogUrl
+- [ ] CancelBuild
+
+### Differences
+
+* Builds are authorized by an new IAM service account
+  (`gcb-compat@[PROJECT_ID].iam.gserviceaccount`), not the usual GCB
+  builder service account (`[PROJECT_NUMBER]@cloudbuild.gserviceaccount.com`)
+* Because builds are translated to Tekton `TaskRun`s and executed on the
+  cluster, any user with permission to delete `TaskRun`s on the cluster can
+  modify build history.
+* Lines in build logs are not prefixed with the step number at this time.
+
+### Limitations
+
+* The compatibility service only runs on GKE.
+* Builds cannot access the Docker socket, e.g., to run `docker build` or
+  `docker run`.
+* Builds can only be requested for the project where the cluster itself is
+  running at this time.
+* Users cannot override the `logsBucket` at this time -- logs will always be
+  written to the same bucket used by gcloud to stage source code
+  (`gs://[PROJECT_ID]_cloudbuild/`)
+* Only GCS source is supported at this time.
+
+### Incompatibilities
+
+* Some step features are unsupported: `waitFor` and `id`, `secretEnv`, and
+  step-level `timeout`.
+* `diskSizeGb` is unsupported.
+
+### New Features
+
+Because builds execute on a GKE cluster, a number of things are now possible, including:
+
+* Access to resources on the cluster's private VPC network.
+* The cluster can be configured to only be visible to authorized VPC networks.
+* Builds share VM nodes ("bin-packing") and nodes can be configured for
+  autoscaling.
+
+### Supported features
+
+* Nearly-complete GCB API compatibility
+* Log streaming to GCS (_currently not streaming_)
+* API authorization: users cannot request builds without permission
+* Builder service accoount auth: builds can access GCP resources as
+  `gcb-compat@[PROJECT_ID].iam.gserviceaccount.com`
+* Cross-step volume mounts
 
 ## Setup
 

@@ -104,7 +104,7 @@ func TestToTaskRun(t *testing.T) {
 		Source: &gcb.Source{
 			StorageSource: &gcb.StorageSource{
 				Bucket:     "my-bucket",
-				Object:     "my-object.tar.gz",
+				Object:     "path/to/my-object.tar.gz",
 				Generation: 12345,
 			},
 		},
@@ -171,7 +171,7 @@ func TestToTaskRun(t *testing.T) {
 						Type: v1alpha1.PipelineResourceTypeStorage,
 						Params: []v1alpha1.Param{{
 							Name:  "location",
-							Value: "gs://my-bucket/my-object.tar.gz#12345",
+							Value: "gs://my-bucket/path/to/my-object.tar.gz", // TODO: generation
 						}, {
 							Name:  "artifactType",
 							Value: string(v1alpha1.GCSArchive),
@@ -233,7 +233,7 @@ func TestToBuild(t *testing.T) {
 						Type: v1alpha1.PipelineResourceTypeStorage,
 						Params: []v1alpha1.Param{{
 							Name:  "location",
-							Value: "gs://my-bucket/my-object.tar.gz#12345",
+							Value: "gs://my-bucket/path/to/my-object.tar.gz#12345",
 						}, {
 							Name:  "artifactType",
 							Value: string(v1alpha1.GCSArchive),
@@ -323,7 +323,7 @@ func TestToBuild(t *testing.T) {
 		FinishTime: end.Format(time.RFC3339),
 		Source: &gcb.Source{StorageSource: &gcb.StorageSource{
 			Bucket:     "my-bucket",
-			Object:     "my-object.tar.gz",
+			Object:     "path/to/my-object.tar.gz",
 			Generation: 12345,
 		}},
 		Steps: []*gcb.BuildStep{{

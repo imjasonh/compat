@@ -144,10 +144,10 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 					Type: v1alpha1.PipelineResourceTypeStorage,
 					Params: []v1alpha1.Param{{
 						Name: "location",
-						Value: fmt.Sprintf("gs://%s/%s#%d",
+						Value: fmt.Sprintf("gs://%s/%s",
 							b.Source.StorageSource.Bucket,
-							b.Source.StorageSource.Object,
-							b.Source.StorageSource.Generation),
+							b.Source.StorageSource.Object),
+						// TODO: generation
 					}, {
 						Name:  "artifactType",
 						Value: string(v1alpha1.GCSArchive),
@@ -210,7 +210,7 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 	if len(tr.Spec.Inputs.Resources) > 0 {
 		if r := tr.Spec.Inputs.Resources[0].ResourceSpec; r != nil && r.Type == v1alpha1.PipelineResourceTypeStorage {
 			parts := strings.Split(tr.Spec.Inputs.Resources[0].ResourceSpec.Params[0].Value, "/")
-			bucket, object := parts[2], parts[3]
+			bucket, object := parts[2], strings.Join(parts[3:], "/")
 			var generation int64
 			if strings.Contains(object, "#") {
 				parts = strings.Split(object, "#")

@@ -17,27 +17,34 @@ limitations under the License.
 package server
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"reflect"
+	"strings"
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/ImJasonH/compat/pkg/constants"
 	"github.com/ImJasonH/compat/pkg/logs"
 	"github.com/julienschmidt/httprouter"
 	typedv1alpha1 "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	gcb "google.golang.org/api/cloudbuild/v1"
+	crm "google.golang.org/api/cloudresourcemanager/v1"
+	"google.golang.org/api/option"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 type Server struct {
-	client    typedv1alpha1.TaskRunInterface
-	logCopier logs.LogCopier
+	client     typedv1alpha1.TaskRunInterface
+	crmService *crm.Service
+	logCopier  logs.LogCopier
 }
 
 func New(client typedv1alpha1.TaskRunInterface, podClient typedcorev1.PodExpansion) *Server {
@@ -105,8 +112,43 @@ func checkProject(got string) error {
 	return nil
 }
 
+var (
+	buildGetter  = []string{"cloudbuild.builds.get"}
+	buildLister  = []string{"cloudbuild.builds.list"}
+	buildCreator = []string{"cloudbuild.builds.create"}
+)
+
+func (s *Server) checkAuth(r *http.Request, perms []string) error {
+	tok := r.Header.Get("Authorization")
+	if tok == "" {
+		return errors.New("No Authorization header")
+	}
+	if !strings.HasPrefix(tok, "Bearer ") {
+		return errors.New("Authorization header malformed")
+	}
+	tok = strings.TrimPrefix(tok, "Bearer ")
+	svc, err := crm.NewService(context.Background(), option.WithTokenSource(oauth2.StaticTokenSource(&oauth2.Token{AccessToken: tok})))
+	if err != nil {
+		return err
+	}
+	resp, err := svc.Projects.TestIamPermissions(constants.ProjectID, &crm.TestIamPermissionsRequest{
+		Permissions: perms,
+	}).Do()
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(resp.Permissions, perms) {
+		return fmt.Errorf("Caller has insufficient subset of permissions: got %v, want %v", resp.Permissions, perms)
+	}
+	return nil
+}
+
 func (s *Server) ListBuilds(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err := checkProject(ps.ByName("projectID")); err != nil {
+		httpError(w, err)
+		return
+	}
+	if err := s.checkAuth(r, buildLister); err != nil {
 		httpError(w, err)
 		return
 	}
@@ -123,6 +165,10 @@ func (s *Server) ListBuilds(w http.ResponseWriter, r *http.Request, ps httproute
 
 func (s *Server) CreateBuild(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err := checkProject(ps.ByName("projectID")); err != nil {
+		httpError(w, err)
+		return
+	}
+	if err := s.checkAuth(r, buildCreator); err != nil {
 		httpError(w, err)
 		return
 	}
@@ -149,6 +195,11 @@ func (s *Server) GetBuild(w http.ResponseWriter, r *http.Request, ps httprouter.
 		httpError(w, err)
 		return
 	}
+	if err := s.checkAuth(r, buildGetter); err != nil {
+		httpError(w, err)
+		return
+	}
+
 	buildID := ps.ByName("buildID")
 	log.Printf("GetBuild for build %q", buildID)
 
@@ -167,6 +218,11 @@ func (s *Server) GetOperation(w http.ResponseWriter, r *http.Request, ps httprou
 		httpError(w, err)
 		return
 	}
+	if err := s.checkAuth(r, buildGetter); err != nil {
+		httpError(w, err)
+		return
+	}
+
 	opName := ps.ByName("opName")
 	log.Printf("GetOperation for operation %q", opName)
 	bs, err := base64.StdEncoding.DecodeString(opName)
