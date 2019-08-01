@@ -34,6 +34,9 @@ A partial list:
 * By default, builds don't specify a disk resource request, and so are given
   whatever default disk resources are available on the node. To specify disk
   resource needs, specify `diskSizeGb`.
+* The project will be billed for GKE cluster usage while the cluster exists, and
+  not on a per-build-minute basis as Cloud Build does today. Bin-packing and
+  autoscaling can help lower these costs.
 
 ### Limitations
 
