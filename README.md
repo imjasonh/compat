@@ -184,7 +184,7 @@ steps:
 
 ## Cleaning up
 
-To tear down the Service running on the cluster:
+To tear down just the Service running on the cluster:
 
 ```
 kubectl delete -f config/
