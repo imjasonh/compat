@@ -8,10 +8,10 @@ A partial list:
 
 - [ ] Authorizing API requests
 - [ ] Streaming logs to GCS
-- [ ] Builder Service Account auth, using Workload Identity
 - [ ] Resolve GCS source provenance at Build creation time
 - [ ] Support container image outputs, report built image digests
 - [ ] Report build step image digests
+- [ ] Generate LogUrl
 
 ## Setup
 
@@ -48,7 +48,7 @@ kubectl annotate serviceaccount \
   iam.gke.io/gcp-service-account=gcb-compat@${PROJECT_ID}.iam.gserviceaccount.com
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
   --member serviceAccount:gcb-compat@${PROJECT_ID}.iam.gserviceaccount.com \
-  --role roles/storage.objectCreator
+  --role roles/storage.storageAdmin
 ```
 
 This creates a GCP Service Account ("GSA") and grants the `gcb-compat-account`
@@ -87,7 +87,7 @@ EOF
 gcloud builds submit --no-source
 ```
 
-This currently fails with a panic in `gcloud` (😅), but the build started!
+This currently doesn't stream logs (😅), but the build started!
 
 ```
 $ gcloud builds list

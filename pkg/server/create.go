@@ -17,6 +17,10 @@ limitations under the License.
 package server
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/ImJasonH/compat/pkg/constants"
@@ -25,14 +29,13 @@ import (
 	gcb "google.golang.org/api/cloudbuild/v1"
 )
 
-func (s *Server) create(b *gcb.Build) (*gcb.Build, error) {
+func (s *Server) create(b *gcb.Build) (*gcb.Operation, error) {
 	log.Println("Creating Build...")
 	tr, err := convert.ToTaskRun(b)
 	if err != nil {
 		return nil, err
 	}
-	tr.Name = uuid.New().String()                         // Generate the build ID.
-	tr.Spec.ServiceAccount = constants.ServiceAccountName // Run as the Workload Identity KSA/GSA
+	tr.Name = uuid.New().String() // Generate the build ID.
 	tr, err = s.client.Create(tr)
 	if err != nil {
 		return nil, err
@@ -44,5 +47,23 @@ func (s *Server) create(b *gcb.Build) (*gcb.Build, error) {
 		}
 	}()
 
-	return convert.ToBuild(*tr)
+	b, err = convert.ToBuild(*tr)
+	if err != nil {
+		return nil, err
+	}
+	return buildToOp(b)
+}
+
+func buildToOp(b *gcb.Build) (*gcb.Operation, error) {
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(gcb.BuildOperationMetadata{Build: b}); err != nil {
+		return nil, err
+	}
+
+	name := fmt.Sprintf("operations/build/%s/%s", constants.ProjectID, base64.StdEncoding.EncodeToString([]byte(b.Id)))
+	return &gcb.Operation{
+		Name:     name,
+		Done:     false,
+		Metadata: buf.Bytes(),
+	}, nil
 }

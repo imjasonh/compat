@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 
 	"cloud.google.com/go/storage"
 	"github.com/ImJasonH/compat/pkg/constants"
@@ -61,12 +62,12 @@ func (l LogCopier) Copy(name string) error {
 		break
 	}
 
+	// Then, copy the logs for each container in the TaskRun's pods.
 	ctx := context.Background()
 	objectName := fmt.Sprintf("log-%s.txt", name)
 	w := l.GCS.Bucket(constants.LogsBucket()).Object(objectName).NewWriter(ctx)
-
-	// Then, copy the logs for each container in the TaskRun's pods.
 	for _, containerName := range containerNames {
+		log.Printf("getting logs for pod %q container %q", podName, containerName)
 		rs, err := l.PodClient.GetLogs(podName, &corev1.PodLogOptions{
 			Container: containerName,
 		}).Stream()

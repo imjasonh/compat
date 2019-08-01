@@ -120,7 +120,8 @@ func TestToTaskRun(t *testing.T) {
 			},
 		},
 		Spec: v1alpha1.TaskRunSpec{
-			Timeout: &metav1.Duration{time.Minute},
+			ServiceAccount: constants.ServiceAccountName,
+			Timeout:        &metav1.Duration{time.Minute},
 			TaskSpec: &v1alpha1.TaskSpec{
 				Inputs: &v1alpha1.Inputs{
 					Resources: []v1alpha1.TaskResource{{
@@ -314,8 +315,9 @@ func TestToBuild(t *testing.T) {
 
 	want := &gcb.Build{
 		Id:         buildID,
+		ProjectId:  constants.ProjectID,
 		Status:     SUCCESS,
-		LogsBucket: "gs://project-id_cloudbuild/",
+		LogsBucket: "gs://project-id_cloudbuild",
 		CreateTime: create.Format(time.RFC3339),
 		StartTime:  start.Format(time.RFC3339),
 		FinishTime: end.Format(time.RFC3339),
@@ -468,8 +470,9 @@ func TestToBuild_MoreSteps(t *testing.T) {
 	// steps at the same time).
 	want := &gcb.Build{
 		Id:         buildID,
+		ProjectId:  constants.ProjectID,
 		Status:     SUCCESS,
-		LogsBucket: "gs://project-id_cloudbuild/",
+		LogsBucket: "gs://project-id_cloudbuild",
 		Steps: []*gcb.BuildStep{{
 			Name:   "one",
 			Timing: &gcb.TimeSpan{StartTime: stepOneStart.Format(time.RFC3339)},

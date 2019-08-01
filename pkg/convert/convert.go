@@ -52,7 +52,8 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 			Annotations: map[string]string{},
 		},
 		Spec: v1alpha1.TaskRunSpec{
-			TaskSpec: &v1alpha1.TaskSpec{},
+			ServiceAccount: constants.ServiceAccountName, // Run as the Workload Identity KSA/GSA
+			TaskSpec:       &v1alpha1.TaskSpec{},
 		},
 	}
 
@@ -167,8 +168,9 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 	out := &gcb.Build{
 		Id:         tr.ObjectMeta.Name,
+		ProjectId:  constants.ProjectID,
 		Results:    &gcb.Results{},
-		LogsBucket: fmt.Sprintf("gs://%s/", constants.LogsBucket()),
+		LogsBucket: fmt.Sprintf("gs://%s", constants.LogsBucket()),
 	}
 	if tr.Spec.TaskSpec == nil {
 		return nil, ErrIncompatible
