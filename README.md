@@ -26,12 +26,11 @@ A partial list:
 ### Differences
 
 * Builds are authorized by an new IAM service account
-  (`gcb-compat@[PROJECT_ID].iam.gserviceaccount`), not the usual GCB
+  (`gcb-compat@[PROJECT_ID].iam.gserviceaccount.com`), not the usual GCB
   builder service account (`[PROJECT_NUMBER]@cloudbuild.gserviceaccount.com`)
 * Because builds are translated to Tekton `TaskRun`s and executed on the
   cluster, any user with permission to delete `TaskRun`s on the cluster can
   modify build history.
-* Lines in build logs are not prefixed with the step number at this time.
 
 ### Limitations
 
@@ -44,12 +43,14 @@ A partial list:
   written to the same bucket used by gcloud to stage source code
   (`gs://[PROJECT_ID]_cloudbuild/`)
 * Only GCS source is supported at this time.
+* Lines in build logs are not prefixed with the step number at this time.
+* Substitutions are not supported at this time.
+* `machineType` and `diskSizeGb` are unsupported at this time.
 
 ### Incompatibilities
 
 * Some step features are unsupported: `waitFor` and `id`, `secretEnv`, and
   step-level `timeout`.
-* `diskSizeGb` is unsupported.
 
 ### New Features
 
@@ -66,7 +67,9 @@ including:
 
 ### Supported features
 
-* Nearly-complete GCB API compatibility
+* Nearly-complete GCB API compatibility: builds can be created, listed, etc.
+* Except for [incompatibilities](#incompatibilities) above, all `steps` features
+  are supported.
 * Log streaming to GCS (_currently not streaming_)
 * API authorization: users cannot request builds without permission
 * Builder service accoount auth: builds can access GCP resources as
