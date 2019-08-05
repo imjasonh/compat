@@ -114,6 +114,7 @@ func checkProject(got string) error {
 
 var (
 	buildGetter  = []string{"cloudbuild.builds.get"}
+	buildUpdater = []string{"cloudbuild.builds.update"}
 	buildLister  = []string{"cloudbuild.builds.list"}
 	buildCreator = []string{"cloudbuild.builds.create"}
 )
@@ -244,6 +245,29 @@ func (s *Server) GetOperation(w http.ResponseWriter, r *http.Request, ps httprou
 		return
 	}
 	if err := json.NewEncoder(w).Encode(op); err != nil {
+		log.Printf("Encode: %v", err)
+	}
+}
+
+func (s *Server) CancelBuild(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	if err := checkProject(ps.ByName("projectID")); err != nil {
+		httpError(w, err)
+		return
+	}
+	if err := s.checkAuth(r, buildUpdater); err != nil {
+		httpError(w, err)
+		return
+	}
+
+	buildID := ps.ByName("buildID")
+	log.Printf("GetBuild for build %q", buildID)
+
+	b, err := s.cancel(buildID)
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+	if err := json.NewEncoder(w).Encode(b); err != nil {
 		log.Printf("Encode: %v", err)
 	}
 }

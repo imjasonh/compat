@@ -48,8 +48,11 @@ func main() {
 	router := httprouter.New()
 	router.POST("/v1/projects/:projectID/builds", srv.CreateBuild)
 	router.GET("/v1/projects/:projectID/builds", srv.ListBuilds)
-	router.GET("/v1/projects/:projectID/builds/:buildID", srv.GetBuild)
 	router.GET("/v1/operations/build/:projectID/:opName", srv.GetOperation)
+	// TODO: Correct path is ":cancel" not "/cancel"
+	// https://github.com/julienschmidt/httprouter/issues/196
+	router.GET("/v1/projects/:projectID/builds/:buildID", srv.GetBuild)
+	router.POST("/v1/projects/:projectID/builds/:buildID/cancel", srv.CancelBuild)
 	router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Not found:", r.Method, r.URL.Path)
 		http.Error(w, "Not found", http.StatusNotFound)
