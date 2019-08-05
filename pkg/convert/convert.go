@@ -265,7 +265,14 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 	case cond == nil:
 		out.Status = QUEUED
 	case cond.Status == corev1.ConditionUnknown:
-		out.Status = WORKING
+		if cond.Reason == "ExceededNodeResources" {
+			// TaskRun is queued due to insufficient cluster
+			// resources. This corresponds to GCB's "QUEUED" state
+			// when the build is being concurrency-capped.
+			out.Status = QUEUED
+		} else {
+			out.Status = WORKING
+		}
 	case cond.Status == corev1.ConditionFalse:
 		out.Status = FAILURE
 	case cond.Status == corev1.ConditionTrue:

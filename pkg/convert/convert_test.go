@@ -436,6 +436,13 @@ func TestToBuild_Status(t *testing.T) {
 			Status: corev1.ConditionTrue,
 		},
 		want: SUCCESS,
+	}, {
+		cond: apis.Condition{
+			Type:   apis.ConditionSucceeded,
+			Status: corev1.ConditionUnknown,
+			Reason: "ExceededNodeResources",
+		},
+		want: QUEUED,
 	}} {
 		t.Run(c.want, func(t *testing.T) {
 			got, err := ToBuild(v1alpha1.TaskRun{
