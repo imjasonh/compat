@@ -20,10 +20,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/ImJasonH/compat/pkg/constants"
+	"github.com/ImJasonH/compat/pkg/server/errorutil"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
@@ -73,8 +75,12 @@ func TestIncompatibleToTaskRun(t *testing.T) {
 		Id:      "bad machine type",
 		Options: &gcb.BuildOptions{MachineType: "NONSENSE"},
 	}} {
-		if _, err := ToTaskRun(b); err != ErrIncompatible {
-			t.Errorf("ToTaskRun(%q): got %v, want incompatible", b.Id, err)
+		if _, err := ToTaskRun(b); err == nil {
+			t.Errorf("ToTaskRun(%q): got nil, wanted error", b.Id)
+		} else {
+			if herr, ok := err.(*errorutil.HTTPError); !ok || herr.Code != http.StatusBadRequest {
+				t.Errorf("ToTaskRun(%q): got %v, want errorutil.Invalid", b.Id, err)
+			}
 		}
 	}
 }

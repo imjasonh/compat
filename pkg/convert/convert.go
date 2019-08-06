@@ -19,7 +19,6 @@ limitations under the License.
 package convert
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -27,6 +26,7 @@ import (
 	"time"
 
 	"github.com/ImJasonH/compat/pkg/constants"
+	"github.com/ImJasonH/compat/pkg/server/errorutil"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -34,13 +34,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 )
-
-// ErrIncompatible is returned by ToTaskRun when the requested build is not
-// compatible with on-cluster execution.
-//
-// TODO(jasonhall): If this error becomes user-facing, give details about why
-// the build is incompatible with on-cluster execution.
-var ErrIncompatible = errors.New("Build is incompatible with on-cluster execution")
 
 var defaultResources = corev1.ResourceList{
 	corev1.ResourceCPU:    resource.MustParse("1"),
@@ -58,10 +51,10 @@ var resourceMapping = map[string]corev1.ResourceList{
 }
 
 // ToTaskRun returns the on-cluster representation of the given Build proto message,
-// or ErrIncompatible if the build is not compatible with on-cluster execution.
+// or errorsutil.Invalid if the build is not compatible with on-cluster execution.
 func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 	if len(b.Secrets) != 0 {
-		return nil, ErrIncompatible
+		return nil, errorutil.Invalid("Incompatible build: .secrets is not supported")
 	}
 	out := &v1alpha1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
@@ -86,7 +79,7 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 		if b.Options.MachineType != "" {
 			rq, found := resourceMapping[b.Options.MachineType]
 			if !found {
-				return nil, ErrIncompatible
+				return nil, errorutil.Invalid("Incompatible build: .machineType %q is not supported", b.Options.MachineType)
 			}
 			resources = corev1.ResourceRequirements{Requests: rq}
 		}
@@ -99,7 +92,7 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 	for idx, s := range b.Steps {
 		// These features are not supported.
 		if len(s.WaitFor) != 0 || len(s.SecretEnv) != 0 || s.Timeout != "" {
-			return nil, ErrIncompatible
+			return nil, errorutil.Invalid("Incompatible build: step %d cannot specify waitFor, secretEnv or timeout", idx)
 		}
 
 		// Env vars are specified as []EnvVar, instead of []string
@@ -161,7 +154,7 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 
 	if b.Source != nil {
 		if b.Source.StorageSource == nil {
-			return nil, ErrIncompatible
+			return nil, errorutil.Invalid("Incompatible build: only .source.storageSource is supported")
 		}
 		out.Spec.TaskSpec.Inputs = &v1alpha1.Inputs{
 			Resources: []v1alpha1.TaskResource{{
@@ -205,7 +198,7 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 		LogsBucket: fmt.Sprintf("gs://%s", constants.LogsBucket()),
 	}
 	if tr.Spec.TaskSpec == nil {
-		return nil, ErrIncompatible
+		return nil, errorutil.Invalid("Incompatible taskRun: .spec.taskSpec is required")
 	}
 
 	for idx, s := range tr.Spec.TaskSpec.Steps {

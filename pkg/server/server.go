@@ -31,6 +31,7 @@ import (
 	"github.com/ImJasonH/compat/pkg/constants"
 	"github.com/ImJasonH/compat/pkg/logs"
 	"github.com/ImJasonH/compat/pkg/pubsub"
+	"github.com/ImJasonH/compat/pkg/server/errorutil"
 	"github.com/julienschmidt/httprouter"
 	typedv1alpha1 "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
 	"golang.org/x/oauth2"
@@ -102,12 +103,6 @@ func (s *Server) Preflight() error {
 	return nil
 }
 
-func httpError(w http.ResponseWriter, err error) {
-	// TODO: JSON-encode response
-	// TODO: actual real error codes
-	http.Error(w, err.Error(), http.StatusInternalServerError)
-}
-
 func checkProject(got string) error {
 	if got != constants.ProjectID {
 		return fmt.Errorf("Project mismatch: got %q, want %q", got, constants.ProjectID)
@@ -149,17 +144,17 @@ func (s *Server) checkAuth(r *http.Request, perms []string) error {
 
 func (s *Server) ListBuilds(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err := checkProject(ps.ByName("projectID")); err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 	if err := s.checkAuth(r, buildLister); err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 
 	resp, err := s.list()
 	if err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
@@ -169,24 +164,24 @@ func (s *Server) ListBuilds(w http.ResponseWriter, r *http.Request, ps httproute
 
 func (s *Server) CreateBuild(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err := checkProject(ps.ByName("projectID")); err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 	if err := s.checkAuth(r, buildCreator); err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 
 	b := &gcb.Build{}
 	defer r.Body.Close()
 	if err := json.NewDecoder(r.Body).Decode(b); err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 
 	op, err := s.create(b)
 	if err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 	if err := json.NewEncoder(w).Encode(op); err != nil {
@@ -196,11 +191,11 @@ func (s *Server) CreateBuild(w http.ResponseWriter, r *http.Request, ps httprout
 
 func (s *Server) GetBuild(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err := checkProject(ps.ByName("projectID")); err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 	if err := s.checkAuth(r, buildGetter); err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 
@@ -209,7 +204,7 @@ func (s *Server) GetBuild(w http.ResponseWriter, r *http.Request, ps httprouter.
 
 	b, err := s.get(buildID)
 	if err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 	if err := json.NewEncoder(w).Encode(b); err != nil {
@@ -219,11 +214,11 @@ func (s *Server) GetBuild(w http.ResponseWriter, r *http.Request, ps httprouter.
 
 func (s *Server) GetOperation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err := checkProject(ps.ByName("projectID")); err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 	if err := s.checkAuth(r, buildGetter); err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 
@@ -231,7 +226,7 @@ func (s *Server) GetOperation(w http.ResponseWriter, r *http.Request, ps httprou
 	log.Printf("GetOperation for operation %q", opName)
 	bs, err := base64.StdEncoding.DecodeString(opName)
 	if err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 	buildID := string(bs)
@@ -239,12 +234,12 @@ func (s *Server) GetOperation(w http.ResponseWriter, r *http.Request, ps httprou
 
 	b, err := s.get(buildID)
 	if err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 	op, err := buildToOp(b)
 	if err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 	if err := json.NewEncoder(w).Encode(op); err != nil {
@@ -254,11 +249,11 @@ func (s *Server) GetOperation(w http.ResponseWriter, r *http.Request, ps httprou
 
 func (s *Server) CancelBuild(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err := checkProject(ps.ByName("projectID")); err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 	if err := s.checkAuth(r, buildUpdater); err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 
@@ -267,7 +262,7 @@ func (s *Server) CancelBuild(w http.ResponseWriter, r *http.Request, ps httprout
 
 	b, err := s.cancel(buildID)
 	if err != nil {
-		httpError(w, err)
+		errorutil.Serve(w, err)
 		return
 	}
 	if err := json.NewEncoder(w).Encode(b); err != nil {

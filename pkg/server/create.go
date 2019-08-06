@@ -22,9 +22,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/ImJasonH/compat/pkg/constants"
 	"github.com/ImJasonH/compat/pkg/convert"
+	"github.com/ImJasonH/compat/pkg/server/errorutil"
 	"github.com/google/uuid"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
@@ -41,6 +43,10 @@ func (s *Server) create(b *gcb.Build) (*gcb.Operation, error) {
 	tr.Name = uuid.New().String() // Generate the build ID.
 	tr, err = s.client.Create(tr)
 	if err != nil {
+		// TODO: This is a brittle hack.
+		if strings.Contains(err.Error(), "admission webhook \"webhook.tekton.dev\" denied the request") {
+			return nil, errorutil.Invalid(err.Error())
+		}
 		return nil, err
 	}
 
@@ -91,7 +97,6 @@ func (s *Server) watch(name string) error {
 		if err := s.pubsub.Publish(b); err != nil {
 			return fmt.Errorf("Error publishing: %v", err)
 		}
-		log.Println("Successfully published to Pub/Sub") // TODO remove
 	}
 	return nil
 }
