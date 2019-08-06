@@ -35,12 +35,6 @@ Use [warm-image](https://github.com/mattmoor/warm-image) which does this using a
 The list could be exposed as a ConfigMap or even an HTTP endpoint which
 creates/deletes `WarmImage` resources.
 
-# PubSub
-
-User must authorize gcb-compat@ to publish to `cloud-builds` topic. The GSA will
-attempt to publish to the topic at each status update (including step updates),
-and will add an annotation denoting the build was run on-cluster.
-
 # Step Timeouts
 
 For each step, set a `ReadinessProbe`
