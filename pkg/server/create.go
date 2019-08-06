@@ -26,7 +26,10 @@ import (
 	"github.com/ImJasonH/compat/pkg/constants"
 	"github.com/ImJasonH/compat/pkg/convert"
 	"github.com/google/uuid"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 )
 
 func (s *Server) create(b *gcb.Build) (*gcb.Operation, error) {
@@ -47,11 +50,50 @@ func (s *Server) create(b *gcb.Build) (*gcb.Operation, error) {
 		}
 	}()
 
+	go func() {
+		if err := s.watch(tr.Name); err != nil {
+			log.Printf("Error watching TaskRun for build %q: %v", tr.Name, err)
+		}
+	}()
+
 	b, err = convert.ToBuild(*tr)
 	if err != nil {
 		return nil, err
 	}
 	return buildToOp(b)
+}
+
+func (s *Server) watch(name string) error {
+	watcher, err := s.client.Watch(metav1.SingleObject(metav1.ObjectMeta{
+		Name:      name,
+		Namespace: constants.Namespace,
+	}))
+	if err != nil {
+		return err
+	}
+	for evt := range watcher.ResultChan() {
+		switch evt.Type {
+		case watch.Deleted:
+			log.Println("TaskRun was deleted; possible cancellation?")
+			return nil
+		case watch.Error:
+			return fmt.Errorf("Error watching TaskRun %q: %v", name, evt.Object)
+		}
+
+		tr, ok := evt.Object.(*v1alpha1.TaskRun)
+		if !ok {
+			return fmt.Errorf("Got non-TaskRun object watching %q: %T", name, evt.Object)
+		}
+		b, err := convert.ToBuild(*tr)
+		if err != nil {
+			return fmt.Errorf("Error converting watched TaskRun %q: %v", name, err)
+		}
+		if err := s.pubsub.Publish(b); err != nil {
+			return fmt.Errorf("Error publishing: %v", err)
+		}
+		log.Println("Successfully published to Pub/Sub") // TODO remove
+	}
+	return nil
 }
 
 func buildToOp(b *gcb.Build) (*gcb.Operation, error) {

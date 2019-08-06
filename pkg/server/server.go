@@ -30,6 +30,7 @@ import (
 	"cloud.google.com/go/compute/metadata"
 	"github.com/ImJasonH/compat/pkg/constants"
 	"github.com/ImJasonH/compat/pkg/logs"
+	"github.com/ImJasonH/compat/pkg/pubsub"
 	"github.com/julienschmidt/httprouter"
 	typedv1alpha1 "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
 	"golang.org/x/oauth2"
@@ -45,6 +46,7 @@ type Server struct {
 	client     typedv1alpha1.TaskRunInterface
 	crmService *crm.Service
 	logCopier  logs.LogCopier
+	pubsub     *pubsub.Publisher
 }
 
 func New(client typedv1alpha1.TaskRunInterface, podClient typedcorev1.PodExpansion) *Server {
@@ -54,6 +56,7 @@ func New(client typedv1alpha1.TaskRunInterface, podClient typedcorev1.PodExpansi
 			Client:    client,
 			PodClient: podClient,
 		},
+		pubsub: pubsub.New(),
 	}
 }
 
