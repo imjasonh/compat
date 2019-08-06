@@ -43,11 +43,7 @@ func Serve(w http.ResponseWriter, err error) {
 	var herr *HTTPError
 	var ok bool
 	if herr, ok = err.(*HTTPError); !ok {
-		herr = &HTTPError{
-			Code:    http.StatusInternalServerError,
-			Message: err.Error(),
-			Status:  "INTERNAL_ERROR",
-		}
+		herr = httpError(http.StatusInternalServerError, err.Error(), "INTERNAL_ERROR")
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(herr.Code)

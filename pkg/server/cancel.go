@@ -18,8 +18,10 @@ package server
 
 import (
 	"log"
+	"strings"
 
 	"github.com/ImJasonH/compat/pkg/convert"
+	"github.com/ImJasonH/compat/pkg/server/errorutil"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +32,9 @@ func (s *Server) cancel(buildID string) (*gcb.Build, error) {
 
 	tr, err := s.client.Get(buildID, metav1.GetOptions{})
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") { // TODO: This is a brittle hack.
+			return nil, errorutil.NotFound(err.Error())
+		}
 		return nil, err
 	}
 
