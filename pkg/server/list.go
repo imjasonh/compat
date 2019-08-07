@@ -20,6 +20,7 @@ import (
 	"log"
 
 	"github.com/ImJasonH/compat/pkg/convert"
+	"github.com/ImJasonH/compat/pkg/server/errorutil"
 	gcb "google.golang.org/api/cloudbuild/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -28,7 +29,7 @@ func (s *Server) list() (*gcb.ListBuildsResponse, error) {
 	log.Println("Listing Builds...")
 	resp, err := s.client.List(metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, errorutil.FromK8s(err)
 	}
 
 	var lr gcb.ListBuildsResponse

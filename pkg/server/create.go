@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/ImJasonH/compat/pkg/constants"
 	"github.com/ImJasonH/compat/pkg/convert"
@@ -43,10 +42,7 @@ func (s *Server) create(b *gcb.Build) (*gcb.Operation, error) {
 	tr.Name = uuid.New().String() // Generate the build ID.
 	tr, err = s.client.Create(tr)
 	if err != nil {
-		if strings.Contains(err.Error(), "admission webhook \"webhook.tekton.dev\" denied the request") { // TODO: This is a brittle hack.
-			return nil, errorutil.Invalid(err.Error())
-		}
-		return nil, err
+		return nil, errorutil.FromK8s(err)
 	}
 
 	go func() {

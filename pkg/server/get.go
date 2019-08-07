@@ -18,7 +18,6 @@ package server
 
 import (
 	"log"
-	"strings"
 
 	"github.com/ImJasonH/compat/pkg/convert"
 	"github.com/ImJasonH/compat/pkg/server/errorutil"
@@ -30,10 +29,7 @@ func (s *Server) get(buildID string) (*gcb.Build, error) {
 	log.Println("Getting Build...")
 	tr, err := s.client.Get(buildID, metav1.GetOptions{})
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") { // TODO: This is a brittle hack.
-			return nil, errorutil.NotFound(err.Error())
-		}
-		return nil, err
+		return nil, errorutil.FromK8s(err)
 	}
 	return convert.ToBuild(*tr)
 }

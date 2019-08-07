@@ -21,12 +21,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type httpResponse struct {
 	Error *HTTPError `json:"error"`
 }
 
+// HTTPError represents an HTTP API error message which will be JSON-encoded
+// and sent to clients.
 type HTTPError struct {
 	Code    int      `json:"code"`
 	Message string   `json:"message"`
@@ -55,6 +58,24 @@ func httpError(code int, message, status string) *HTTPError {
 	}
 }
 
+// FromK8s attempts to translate an error received from a Kubernetes API server
+// request into a useful end-user-visible HTTP API error message.
+func FromK8s(err error) error {
+	switch {
+	case strings.Contains(err.Error(), "admission webhook \"webhook.tekton.dev\" denied the request"):
+		return Invalid(err.Error())
+	case strings.Contains(err.Error(), "is forbidden"):
+		return Forbidden(err.Error())
+	case strings.Contains(err.Error(), "not found"):
+		return NotFound(err.Error())
+	}
+	return err
+}
+
+// Serve serves the error to an HTTP response.
+//
+// The details of the error will be JSON-encoded in the format that clients
+// expect.
 func Serve(w http.ResponseWriter, err error) {
 	var herr *HTTPError
 	var ok bool
@@ -70,18 +91,24 @@ func Serve(w http.ResponseWriter, err error) {
 	}
 }
 
+// Invalid returns an HTTPError denoting the request was invalid.
 func Invalid(format string, args ...interface{}) *HTTPError {
 	return httpError(http.StatusBadRequest, fmt.Sprintf(format, args...), "INVALID_ARGUMENT")
 }
 
+// Unauthorized returns an HTTPError denoting the user is not authorized to
+// perform the requested action.
 func Unauthorized(format string, args ...interface{}) *HTTPError {
 	return httpError(http.StatusUnauthorized, fmt.Sprintf(format, args...), "UNAUTHORIZED")
 }
 
+// Forbidden returns an HTTPError denoting the user is forbidden to perform the
+// requested action.
 func Forbidden(format string, args ...interface{}) *HTTPError {
 	return httpError(http.StatusForbidden, fmt.Sprintf(format, args...), "FORBIDDEN")
 }
 
+// NotFound returns an HTTPError denoting the requested resource is not found.
 func NotFound(format string, args ...interface{}) *HTTPError {
 	return httpError(http.StatusNotFound, fmt.Sprintf(format, args...), "NOT_FOUND")
 }
