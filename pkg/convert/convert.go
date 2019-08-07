@@ -58,6 +58,8 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 	}
 	out := &v1alpha1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
+			Name:        b.Id,
+			Namespace:   constants.Namespace,
 			Annotations: map[string]string{},
 		},
 		Spec: v1alpha1.TaskRunSpec{
@@ -324,6 +326,7 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 	if podName := tr.Status.PodName; podName != "" {
 		out.LogUrl = fmt.Sprintf(logURLFmt, constants.ProjectID, constants.ProjectID, podName)
 	}
+
 	return out, nil
 }
 

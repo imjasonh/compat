@@ -35,28 +35,38 @@ import (
 
 func (s *Server) create(b *gcb.Build) (*gcb.Operation, error) {
 	log.Println("Creating Build...")
+	b.Id = uuid.New().String() // Generate a new build ID.
+
+	// Apply substitutions.
+	if err := convert.SubstituteBuildFields(b); err != nil {
+		return nil, err
+	}
+
+	// Convert to TaskRun and create it.
 	tr, err := convert.ToTaskRun(b)
 	if err != nil {
 		return nil, err
 	}
-	tr.Name = uuid.New().String() // Generate the build ID.
 	tr, err = s.client.Create(tr)
 	if err != nil {
 		return nil, errorutil.FromK8s(err)
 	}
 
+	// Watch TaskRun for logs.
 	go func() {
 		if err := s.logCopier.Copy(tr.Name); err != nil {
 			log.Printf("Error copying logs for build %q: %v", tr.Name, err)
 		}
 	}()
 
+	// Watch TaskRun for PubSub updates.
 	go func() {
 		if err := s.watch(tr.Name); err != nil {
 			log.Printf("Error watching TaskRun for build %q: %v", tr.Name, err)
 		}
 	}()
 
+	// Convert TaskRun to Build and wrap it in an Operation response.
 	b, err = convert.ToBuild(*tr)
 	if err != nil {
 		return nil, err

@@ -126,6 +126,8 @@ func TestToTaskRun(t *testing.T) {
 
 	wantTaskRun := &v1alpha1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
+			Name:      "compatible",
+			Namespace: constants.Namespace,
 			Annotations: map[string]string{
 				"entrypoint-0": "bash",
 			},
@@ -208,7 +210,9 @@ func TestToTaskRun(t *testing.T) {
 // TestToTaskRun_Resources tests conversion of build requests that specify a
 // machine_type and custom disk size.
 func TestToTaskRun_Resources(t *testing.T) {
+	buildID := "build-id"
 	build, err := ToTaskRun(&gcb.Build{
+		Id:    buildID,
 		Steps: []*gcb.BuildStep{{Name: "ubuntu"}},
 		Options: &gcb.BuildOptions{
 			MachineType: "N1_HIGHCPU_32",
@@ -219,7 +223,10 @@ func TestToTaskRun_Resources(t *testing.T) {
 		t.Fatalf("ToTaskRun: %v", err)
 	}
 	wantTaskRun := &v1alpha1.TaskRun{
-		ObjectMeta: metav1.ObjectMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      buildID,
+			Namespace: constants.Namespace,
+		},
 		Spec: v1alpha1.TaskRunSpec{
 			ServiceAccount: constants.ServiceAccountName,
 			TaskSpec: &v1alpha1.TaskSpec{
