@@ -2,7 +2,7 @@
 
 **This is an experimental work in progress**
 
-This project provides a Kubernetes service that can be installed on a
+This project provides an API service that can drive a
 [Tekton](https://tekton.dev)-enabled GKE cluster to emulate the [Google Cloud
 Build](https://cloud.google.com/cloud-build) service. The aim is to support the
 full [`gcloud builds
@@ -74,6 +74,8 @@ including:
 * Builds are run as Pods on the cluster, and export resource usage metrics (CPU,
   RAM, etc.) to [Stackdriver
   Monitoring](https://cloud.google.com/monitoring/kubernetes-engine/).
+* Authorized users can delete items from build history, which can be useful in
+  some cases, for instance credential leaks.
 
 ### Supported features
 
@@ -93,147 +95,8 @@ including:
 
 ## Setup
 
-Prerequisites:
+There are two options for installing the Service and connecting it to your
+cluster resources:
 
-1. A GKE cluster with [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) enabled.
-1. A working Tekton installation on the cluster.
-
-If you don't already have a cluster, this will create one and install the latest
-Tekton release:
-
-```
-PROJECT_ID=$(gcloud config get-value project)
-ZONE=us-east4-a
-gcloud beta container clusters create new-cluster --zone=${ZONE} \
-  --machine-type=n1-standard-4 --num-nodes=3 \
-  --identity-namespace=${PROJECT_ID}.svc.id.goog
-gcloud container clusters get-credentials new-cluster --zone=${ZONE}
-kubectl apply --filename https://storage.googleapis.com/tekton-releases/latest/release.yaml
-```
-
-With those prerequisites satisfied, create the Kubernetes service account:
-
-```
-KO_DOCKER_REPO=gcr.io/${PROJECT_ID}
-ko apply -f config/100-serviceaccount.yaml
-```
-
-Next, set up Workload Identity:
-
-```
-PROJECT_ID=$(gcloud config get-value project)
-gcloud iam service-accounts create gcb-compat
-gcloud iam service-accounts add-iam-policy-binding \
-  --role roles/iam.workloadIdentityUser \
-  --member "serviceAccount:${PROJECT_ID}.svc.id.goog[gcb-compat/gcb-compat-account]" \
-  gcb-compat@${PROJECT_ID}.iam.gserviceaccount.com
-kubectl annotate serviceaccount \
-  --namespace gcb-compat \
-  gcb-compat-account \
-  iam.gke.io/gcp-service-account=gcb-compat@${PROJECT_ID}.iam.gserviceaccount.com
-gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-  --member serviceAccount:gcb-compat@${PROJECT_ID}.iam.gserviceaccount.com \
-  --role roles/storage.admin
-```
-
-This creates a GCP Service Account ("GSA") and grants the `gcb-compat-account`
-Kubernetes Service Account (KSA) permission to act as that GSA.
-
-Now, install the full service:
-
-```
-KO_DOCKER_REPO=gcr.io/${PROJECT_ID}
-ko apply -f config/
-```
-
-This builds and deploys the replicated Kubernetes Service behind a Load
-Balancer, all in the namespace `gcb-compat`, running as the Kubernetes Service
-Account `gcb-compat-account`.
-
-At this point, you can grant any desired GCP IAM roles to the service account.
-For instance, to give the GSA permission to view GCB builds:
-
-```
-gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-  --member serviceAccount:gcb-compat@${PROJECT_ID}.iam.gserviceaccount.com \
-  --role roles/cloudbuild.builds.viewer
-```
-
-## Testing
-
-First, get the address of the load balancer created above, and tell `gcloud` to
-use that service instead of the regular GCB API service:
-
-```
-SERVICE_IP=$(kubectl get service gcb-compat-service -n gcb-compat -ojsonpath="{.status.loadBalancer.ingress[0].ip}")
-export CLOUDSDK_API_ENDPOINT_OVERRIDES_CLOUDBUILD=http://${SERVICE_IP}/
-```
-
-**NB:** It might take a minute or two for the Service to get its IP right after
-you create it.
-
-Now we'll tell `gcloud` to run a simple build:
-
-```
-cat > cloudbuild.yaml << EOF
-steps:
-- name: ubuntu
-  args: ['echo', 'hello']
-EOF
-gcloud builds submit --no-source
-```
-
-This currently doesn't stream logs (😅), but the build started!
-
-```
-$ gcloud builds list
-ID                                    CREATE_TIME  DURATION  SOURCE  IMAGES  STATUS
-6b0c5eea-f06d-4e5b-998a-76d0e4941376  -            28S       -       -       SUCCESS
-c13efb20-cc33-4c4e-b605-2595cca63791  -            4S        -       -       WORKING # <--- yeessss
-```
-
-It's working! Let's see if it succeeds:
-
-```
-$ gcloud builds describe c13efb20-cc33-4c4e-b605-2595cca63791
-finishTime: '2019-07-30T20:50:39Z'
-id: c13efb20-cc33-4c4e-b605-2595cca63791
-results: {}
-startTime: '2019-07-30T20:50:35Z'
-status: SUCCESS
-steps:
-- args:
-  - go
-  - version
-  name: golang
-  status: SUCCESS
-  timing:
-    endTime: '2019-07-30T20:50:39Z'
-    startTime: '2019-07-30T20:50:38Z'
-```
-
-Now we can get its logs:
-
-```
-$ gcloud builds log c13efb20-cc33-4c4e-b605-2595cca63791
------------------------------------ REMOTE BUILD OUTPUT ----------------------------------
-hello
-------------------------------------------------------------------------------------------
-```
-
-🎉🎉🎉
-
-
-## Cleaning up
-
-To tear down just the Service running on the cluster:
-
-```
-kubectl delete -f config/
-```
-
-To delete the IAM Service Account:
-
-```
-gcloud iam service-accounts delete gcb-compat@${PROJECT_ID}.iam.gserviceaccount.com
-```
+* [Install on GKE](docs/install_cluster.md)
+* [Install on Cloud Run](docs/install_cloud_run.md)
