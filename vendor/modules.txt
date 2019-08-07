@@ -87,12 +87,12 @@ go.opencensus.io
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/net v0.0.0-20190724013045-ca1201d0de80
 golang.org/x/net/http2
+golang.org/x/net/context/ctxhttp
+golang.org/x/net/context
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/trace
-golang.org/x/net/context/ctxhttp
-golang.org/x/net/context
 golang.org/x/net/internal/timeseries
 # golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
@@ -117,6 +117,7 @@ golang.org/x/time/rate
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
 # google.golang.org/api v0.7.0
+google.golang.org/api/container/v1beta1
 google.golang.org/api/cloudbuild/v1
 google.golang.org/api/googleapi
 google.golang.org/api/storage/v1
