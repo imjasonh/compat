@@ -49,3 +49,33 @@ started. It's possible we could update each container to have a readiness probe
 only after we've seen it's started, but we'd have to test it. I'm not sure how
 important it is to support step-level timeouts if it's going to be this kludgey.
 Or maybe it's worth just supporting it Tekton directly.
+
+# Labels
+
+Allow the user to pass key/value pairs from build tags to the underlying Pod's
+labels, which can then be passed through [GKE usage
+metering](https://cloud.google.com/kubernetes-engine/docs/how-to/cluster-usage-metering)
+to a BigQuery dataset to visualize usage and costs for sub-teams.
+
+As a strawman:
+
+```
+steps:
+...
+
+tags:
+- label.department=api-backend
+- label.stage=staging-release
+```
+
+This would get translated into a `TaskRun` label, and `Pod` label like:
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    usage-department: api-backend
+    usage-stage: staging-release
+    ...
+```
