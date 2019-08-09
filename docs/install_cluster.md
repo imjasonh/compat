@@ -8,7 +8,7 @@ requirements that dictate that services run on a GKE cluster.
 When installed this way, the service runs as a K8s Deployment and Service on
 nodes inside your cluster.
 
-[!./cluster.png]
+![Diagram of cluster installation](./cluster.png)
 
 The other alternative is to run the Service on Cloud Run, which gives you
 automatic autoscaling to zero, usage-based billing, and free managed SSL
