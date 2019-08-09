@@ -6,6 +6,10 @@ much experience with Kubernetes or GKE, and if you want simpler deployment and
 management of the service, including autoscaling and Google-managed SSL
 certificates.
 
+When installed this way, the service runs in Cloud Run outside your cluster and connects to the cluster to run workloads.
+
+[!./cloud_run.png]
+
 The other alternative is to run the Service on your GKE cluster itself, which
 gives you more control over the security and accessibility of the Service, but
 requires more care to securely set it up. Installation instructions for GKE are

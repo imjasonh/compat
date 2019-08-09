@@ -5,6 +5,11 @@ cluster. This might be preferrable for you if you already have experience with
 securely setting up services on Kubernetes and GKE, and if you have security
 requirements that dictate that services run on a GKE cluster.
 
+When installed this way, the service runs as a K8s Deployment and Service on
+nodes inside your cluster.
+
+[!./cluster.png]
+
 The other alternative is to run the Service on Cloud Run, which gives you
 automatic autoscaling to zero, usage-based billing, and free managed SSL
 certificates. Installation instructions for Cloud Run are
