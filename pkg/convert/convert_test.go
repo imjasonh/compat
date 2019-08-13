@@ -24,8 +24,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ImJasonH/compat/pkg/constants"
-	"github.com/ImJasonH/compat/pkg/server/errorutil"
+	"github.com/GoogleCloudPlatform/compat/pkg/constants"
+	"github.com/GoogleCloudPlatform/compat/pkg/server/errorutil"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"

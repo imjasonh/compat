@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/ImJasonH/compat/pkg/constants"
+	"github.com/GoogleCloudPlatform/compat/pkg/constants"
 	gcb "google.golang.org/api/cloudbuild/v1"
 )
 

@@ -19,8 +19,8 @@ package server
 import (
 	"log"
 
-	"github.com/ImJasonH/compat/pkg/convert"
-	"github.com/ImJasonH/compat/pkg/server/errorutil"
+	"github.com/GoogleCloudPlatform/compat/pkg/convert"
+	"github.com/GoogleCloudPlatform/compat/pkg/server/errorutil"
 	gcb "google.golang.org/api/cloudbuild/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

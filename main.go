@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main // import "github.com/ImJasonH/compat"
+package main // import "github.com/GoogleCloudPlatform/compat"
 
 import (
 	"context"
@@ -26,8 +26,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/ImJasonH/compat/pkg/constants"
-	"github.com/ImJasonH/compat/pkg/server"
+	"github.com/GoogleCloudPlatform/compat/pkg/constants"
+	"github.com/GoogleCloudPlatform/compat/pkg/server"
 	"github.com/julienschmidt/httprouter"
 	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"golang.org/x/oauth2"

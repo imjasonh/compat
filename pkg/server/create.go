@@ -23,9 +23,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ImJasonH/compat/pkg/constants"
-	"github.com/ImJasonH/compat/pkg/convert"
-	"github.com/ImJasonH/compat/pkg/server/errorutil"
+	"github.com/GoogleCloudPlatform/compat/pkg/constants"
+	"github.com/GoogleCloudPlatform/compat/pkg/convert"
+	"github.com/GoogleCloudPlatform/compat/pkg/server/errorutil"
 	"github.com/google/uuid"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"

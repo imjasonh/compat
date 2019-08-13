@@ -1,4 +1,4 @@
-module github.com/ImJasonH/compat
+module github.com/GoogleCloudPlatform/compat
 
 go 1.12
 

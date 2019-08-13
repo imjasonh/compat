@@ -21,8 +21,8 @@ import (
 	"io"
 	"log"
 
-	"github.com/ImJasonH/compat/pkg/constants"
-	"github.com/ImJasonH/compat/pkg/convert"
+	"github.com/GoogleCloudPlatform/compat/pkg/constants"
+	"github.com/GoogleCloudPlatform/compat/pkg/convert"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	typedv1alpha1 "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
 	corev1 "k8s.io/api/core/v1"

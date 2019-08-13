@@ -1,4 +1,6 @@
-# Copyright 2019 Google, LLC.
+#!/usr/bin/env bash
+
+# Copyright 2019 Google, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,27 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: gcb-compat
-  namespace: gcb-compat
-  labels:
-    app: gcb-compat
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: gcb-compat
-  template:
-    metadata:
-      labels:
-        app: gcb-compat
-    spec:
-      serviceAccountName: gcb-compat-account
-      containers:
-      - name: gcb-compat
-        image: github.com/GoogleCloudPlatform/compat
-        ports:
-        - containerPort: 8080
+set -o errexit
+set -o nounset
+set -o pipefail
 
+version=$1
+
+out=release.yaml
+if [ "$1" != "" ]; then
+  out=release-$1.yaml
+fi
+
+echo writing ${out}
+
+KO_DOCKER_REPO=gcr.io/gcb-compat ko resolve -t 0.0.1 -P -f config/  > ${out}
