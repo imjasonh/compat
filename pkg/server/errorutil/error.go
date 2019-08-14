@@ -87,7 +87,7 @@ func Serve(w http.ResponseWriter, err error) {
 	e := json.NewEncoder(w)
 	e.SetIndent("", "  ")
 	if err := e.Encode(httpResponse{Error: herr}); err != nil {
-		log.Println("Error JSON-encoding HTTP error response: %v", err)
+		log.Printf("Error JSON-encoding HTTP error response: %v", err)
 	}
 }
 
