@@ -17,12 +17,14 @@ limitations under the License.
 package logs
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"strings"
 
 	"github.com/GoogleCloudPlatform/compat/pkg/constants"
-	"github.com/GoogleCloudPlatform/compat/pkg/convert"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	typedv1alpha1 "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -43,59 +45,77 @@ func (l LogCopier) Copy(name string) error {
 		return err
 	}
 
-	// First, wait until the TaskRun is done.
+	podName, containerNames, err := l.waitUntilStart(name)
+	if err != nil {
+		return err
+	}
+
+	for _, containerName := range containerNames {
+		log.Printf("getting logs for pod %q container %q", podName, containerName)
+		var rc io.ReadCloser
+		for {
+			rc, err = l.PodClient.GetLogs(podName, &corev1.PodLogOptions{
+				Container: containerName,
+				Follow:    true,
+			}).Stream()
+			if err != nil {
+				if strings.Contains(err.Error(), "is waiting to start: PodInitializing") {
+					continue
+				}
+				return fmt.Errorf("Error getting K8s log stream: %v", err)
+			}
+			break
+		}
+		if _, err := io.Copy(io.MultiWriter(os.Stdout, w), rc); err != nil {
+			return fmt.Errorf("Error copying logs to GCS: %v", err)
+		}
+		if err := rc.Close(); err != nil {
+			return fmt.Errorf("Error closing K8s logs stream: %v", err)
+		}
+	}
+	return nil
+}
+
+func (l LogCopier) waitUntilStart(name string) (podName string, containerNames []string, err error) {
+	tr, err := l.Client.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return "", nil, err
+	}
+
+	if tr.Status.PodName != "" {
+		return tr.Status.PodName, getContainerNames(tr), nil
+	}
+
 	watcher, err := l.Client.Watch(metav1.SingleObject(metav1.ObjectMeta{
 		Name:      name,
 		Namespace: constants.Namespace,
 	}))
 	if err != nil {
-		return err
+		return "", nil, err
 	}
-	var podName string
-	var containerNames []string
 	for evt := range watcher.ResultChan() {
 		switch evt.Type {
 		case watch.Deleted:
-			return fmt.Errorf("TaskRun %q was deleted while watching", name)
+			return "", nil, fmt.Errorf("TaskRun %q was deleted while watching", name)
 		case watch.Error:
-			return fmt.Errorf("Error watching TaskRun %q: %v", name, evt.Object)
+			return "", nil, fmt.Errorf("Error watching TaskRun %q: %v", name, evt.Object)
 		}
 		tr, ok := evt.Object.(*v1alpha1.TaskRun)
 		if !ok {
-			return fmt.Errorf("Got non-TaskRun object watching %q: %T", name, evt.Object)
+			return "", nil, fmt.Errorf("Got non-TaskRun object watching %q: %T", name, evt.Object)
 		}
-		b, err := convert.ToBuild(*tr)
-		if err != nil {
-			return fmt.Errorf("Error converting watched TaskRun %q: %v", name, err)
-		}
-		switch b.Status {
-		case convert.WORKING, convert.QUEUED:
-			continue
-		}
-		if tr.Status.PodName != "" {
-			podName = tr.Status.PodName
-		}
-		for _, ss := range tr.Status.Steps { // These are in order.
-			containerNames = append(containerNames, ss.ContainerName)
-		}
-		break
-	}
 
-	// Then, copy the logs for each container in the TaskRun's pods.
-	for _, containerName := range containerNames {
-		log.Printf("getting logs for pod %q container %q", podName, containerName)
-		rs, err := l.PodClient.GetLogs(podName, &corev1.PodLogOptions{
-			Container: containerName,
-		}).Stream()
-		if err != nil {
-			return fmt.Errorf("Error getting K8s log stream: %v", err)
-		}
-		if _, err := io.Copy(w, rs); err != nil {
-			return fmt.Errorf("Error copying logs to GCS: %v", err)
-		}
-		if err := rs.Close(); err != nil {
-			return fmt.Errorf("Error closing K8s logs stream: %v", err)
+		if tr.Status.PodName != "" {
+			return tr.Status.PodName, getContainerNames(tr), nil
 		}
 	}
-	return nil
+	return "", nil, errors.New("watch ended before taskrun started")
+}
+
+func getContainerNames(tr *v1alpha1.TaskRun) []string {
+	var cn []string
+	for _, s := range tr.Status.Steps {
+		cn = append(cn, s.ContainerName)
+	}
+	return cn
 }
