@@ -32,7 +32,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20190414153302-2ae31c8b6b30 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/sergi/go-diff v1.0.0
-	github.com/tektoncd/pipeline v0.5.1-0.20190726152956-c5769af4dcd1
+	github.com/tektoncd/pipeline v0.0.0-20190814109494-1fc4d3d62cee
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 // indirect
 	golang.org/x/exp v0.0.0-20190718202018-cfdd5522f6f6 // indirect
 	golang.org/x/image v0.0.0-20190703141733-d6a02ce849c9 // indirect

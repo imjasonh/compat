@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Tekton Authors.
+Copyright 2019 The Tekton Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -255,4 +255,19 @@ func (pr *PipelineRun) IsCancelled() bool {
 // GetRunKey return the pipelinerun key for timeout handler map
 func (pr *PipelineRun) GetRunKey() string {
 	return fmt.Sprintf("%s/%s/%s", pipelineRunControllerName, pr.Namespace, pr.Name)
+}
+
+// IsTimedOut returns true if a pipelinerun has exceeded its spec.Timeout based on its status.Timeout
+func (pr *PipelineRun) IsTimedOut() bool {
+	pipelineTimeout := pr.Spec.Timeout
+	startTime := pr.Status.StartTime
+
+	if !startTime.IsZero() && pipelineTimeout != nil {
+		timeout := pipelineTimeout.Duration
+		runtime := time.Since(startTime.Time)
+		if runtime > timeout {
+			return true
+		}
+	}
+	return false
 }

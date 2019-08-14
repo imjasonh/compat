@@ -134,7 +134,7 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 			}
 		}
 
-		cont := corev1.Container{
+		out.Spec.TaskSpec.Steps = append(out.Spec.TaskSpec.Steps, v1alpha1.Step{Container: corev1.Container{
 			Image:        s.Name,
 			Name:         s.Id,
 			WorkingDir:   s.Dir,
@@ -142,9 +142,7 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 			Env:          env,
 			VolumeMounts: volMounts,
 			Resources:    resources,
-		}
-
-		out.Spec.TaskSpec.Steps = append(out.Spec.TaskSpec.Steps, cont)
+		}})
 	}
 
 	// Specify all the volumes used by all steps.
@@ -169,7 +167,7 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 				Name: "source",
 				ResourceSpec: &v1alpha1.PipelineResourceSpec{
 					Type: v1alpha1.PipelineResourceTypeStorage,
-					Params: []v1alpha1.Param{{
+					Params: []v1alpha1.ResourceParam{{
 						Name: "location",
 						Value: fmt.Sprintf("gs://%s/%s",
 							b.Source.StorageSource.Bucket,
@@ -199,6 +197,7 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 		Results:    &gcb.Results{},
 		LogsBucket: fmt.Sprintf("gs://%s", constants.LogsBucket()),
 	}
+
 	if tr.Spec.TaskSpec == nil {
 		return nil, errorutil.Invalid("Incompatible taskRun: .spec.taskSpec is required")
 	}
@@ -321,6 +320,9 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 				StartTime: run.StartedAt.Time.Format(time.RFC3339),
 			}
 		}
+
+		out.Results.BuildStepImages = append(out.Results.BuildStepImages, getImageDigest(state.ImageID))
+
 	}
 
 	if podName := tr.Status.PodName; podName != "" {
@@ -328,6 +330,14 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 	}
 
 	return out, nil
+}
+
+func getImageDigest(imageID string) string {
+	if strings.HasPrefix(imageID, "docker-pullable://") &&
+		strings.Contains(imageID, "@") {
+		return imageID[strings.LastIndex(imageID, "@")+1:]
+	}
+	return ""
 }
 
 const (
