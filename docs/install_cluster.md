@@ -113,42 +113,39 @@ EOF
 gcloud builds submit --no-source
 ```
 
-This currently doesn't stream logs (😅), but the build started!
+The build has started! You should see logs streamed to your console, until the
+build completes:
 
 ```
-$ gcloud builds list
-ID                                    CREATE_TIME  DURATION  SOURCE  IMAGES  STATUS
-6b0c5eea-f06d-4e5b-998a-76d0e4941376  -            28S       -       -       SUCCESS
-c13efb20-cc33-4c4e-b605-2595cca63791  -            4S        -       -       WORKING # <--- yeessss
-```
-
-It's working! Let's see if it succeeds:
-
-```
-$ gcloud builds describe c13efb20-cc33-4c4e-b605-2595cca63791
-finishTime: '2019-07-30T20:50:39Z'
-id: c13efb20-cc33-4c4e-b605-2595cca63791
-results: {}
-startTime: '2019-07-30T20:50:35Z'
-status: SUCCESS
-steps:
-- args:
-  - go
-  - version
-  name: golang
-  status: SUCCESS
-  timing:
-    endTime: '2019-07-30T20:50:39Z'
-    startTime: '2019-07-30T20:50:38Z'
-```
-
-Now we can get its logs:
-
-```
-$ gcloud builds log c13efb20-cc33-4c4e-b605-2595cca63791
+Created [http://XX.XXX.XXX.XXX/v1/projects/my-project/builds/79deb463-6a02-4f65-aae5-c572095d7835].
+Logs are available in the Cloud Console.
 ----------------------------------- REMOTE BUILD OUTPUT ----------------------------------
 hello
 ------------------------------------------------------------------------------------------
+ID                                    CREATE_TIME                DURATION  SOURCE  IMAGES  STATUS
+79deb463-6a02-4f65-aae5-c572095d7835  2019-08-14T16:52:08+00:00  6S        -       -       SUCCESS
+```
+
+Let's get the build details:
+
+```
+$ gcloud builds describe 79deb463-6a02-4f65-aae5-c572095d7835
+createTime: '2019-08-14T16:52:08Z'
+finishTime: '2019-08-14T16:52:14Z'
+id: 79deb463-6a02-4f65-aae5-c572095d7835
+logsBucket: gs://my-project_cloudbuild
+results: {}
+startTime: '2019-08-14T16:52:08Z'
+status: SUCCESS
+steps:
+- args:
+  - echo
+  - hello
+  name: ubuntu
+  status: SUCCESS
+  timing:
+    endTime: '2019-08-14T16:52:13Z'
+    startTime: '2019-08-14T16:52:11Z'
 ```
 
 🎉🎉🎉

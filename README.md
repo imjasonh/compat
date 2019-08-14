@@ -16,7 +16,6 @@ assorted [differences](#differences).
 A partial list:
 
 - [ ] Support .tgz source archives uploaded from gcloud
-- [ ] Streaming logs to GCS
 - [ ] Resolve GCS source provenance at Build creation time
 - [ ] Support container image outputs, report built image digests
 - [ ] Report build step image digests
@@ -82,7 +81,7 @@ including:
 * Nearly-complete GCB API compatibility: builds can be created, listed, etc.
 * Except for [incompatibilities](#incompatibilities) above, all `steps` features
   are supported.
-* Log streaming to GCS (_currently not streaming_)
+* Log streaming to GCS
 * API authorization: users cannot request builds without permission
 * Builder service accoount auth: builds can access GCP resources as
   `gcb-compat@[PROJECT_ID].iam.gserviceaccount.com`

@@ -23,6 +23,6 @@ Then, grant the **Publisher** role to the service account:
 
 ```
 gcloud beta pubsub topics add-iam-policy-binding cloud-builds \
-  --member serviceAccount:gcb-compat@test-argo.iam.gserviceaccount.com \
+  --member serviceAccount:gcb-compat@${PROJECT_ID}.iam.gserviceaccount.com \
   --role roles/pubsub.publisher
 ```
