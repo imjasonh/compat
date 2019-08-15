@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Tekton Authors.
+Copyright 2019 The Tekton Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -196,6 +196,7 @@ type StepState struct {
 	corev1.ContainerState
 	Name          string `json:"name,omitempty"`
 	ContainerName string `json:"container,omitempty"`
+	ImageID       string `json:"imageID,omitempty"`
 }
 
 // CloudEventDelivery is the target of a cloud event along with the state of

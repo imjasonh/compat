@@ -18,9 +18,9 @@ package v1alpha1
 
 import "context"
 
-func (t *PipelineResource) SetDefaults(ctx context.Context) {
-	t.Spec.SetDefaults(ctx)
+func (c *Condition) SetDefaults(ctx context.Context) {
+	c.Spec.SetDefaults(ctx)
 }
 
-func (ts *PipelineResourceSpec) SetDefaults(ctx context.Context) {
+func (cs *ConditionSpec) SetDefaults(ctx context.Context) {
 }

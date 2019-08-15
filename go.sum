@@ -155,6 +155,8 @@ github.com/stretchr/objx v0.2.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoH
 github.com/stretchr/testify v0.0.0-20151208002404-e3a8ff8ce365/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
+github.com/tektoncd/pipeline v0.0.0-20190814109494-1fc4d3d62cee h1:ogzezvrs5PFdx8U2kaK2xdjSEQmx4CwhUq7CN3pfPTE=
+github.com/tektoncd/pipeline v0.0.0-20190814109494-1fc4d3d62cee/go.mod h1:IZzJdiX9EqEMuUcgdnElozdYYRh0/ZRC+NKMLj1K3Yw=
 github.com/tektoncd/pipeline v0.5.1-0.20190726152956-c5769af4dcd1 h1:q8Z04JA/rHdjdIpf7vb8Z/N2OiD15p308OyA0goAYJc=
 github.com/tektoncd/pipeline v0.5.1-0.20190726152956-c5769af4dcd1/go.mod h1:IZzJdiX9EqEMuUcgdnElozdYYRh0/ZRC+NKMLj1K3Yw=
 github.com/tektoncd/pipeline v0.5.2 h1:3+OSjEamMxBM+qIvhZowE6rSLWZdtUT3jSkqIDG5MnA=

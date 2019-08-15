@@ -142,7 +142,7 @@ func TestToTaskRun(t *testing.T) {
 						Type: "storage",
 					}},
 				},
-				Steps: []corev1.Container{{
+				Steps: []v1alpha1.Step{{Container: corev1.Container{
 					Image:      "ubuntu",
 					Name:       "my-id",
 					WorkingDir: "foo/bar",
@@ -165,7 +165,7 @@ func TestToTaskRun(t *testing.T) {
 						corev1.ResourceCPU:    resource.MustParse("1"),
 						corev1.ResourceMemory: resource.MustParse("3.75Gi"),
 					}},
-				}, {
+				}}, {Container: corev1.Container{
 					Image:   "busybox",
 					Command: []string{"true"},
 					VolumeMounts: []corev1.VolumeMount{{
@@ -173,7 +173,7 @@ func TestToTaskRun(t *testing.T) {
 						MountPath: "/something/else",
 					}},
 					Resources: corev1.ResourceRequirements{Requests: defaultResources},
-				}},
+				}}},
 				Volumes: []corev1.Volume{{
 					Name:         "bar",
 					VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
@@ -187,7 +187,7 @@ func TestToTaskRun(t *testing.T) {
 					Name: "source",
 					ResourceSpec: &v1alpha1.PipelineResourceSpec{
 						Type: v1alpha1.PipelineResourceTypeStorage,
-						Params: []v1alpha1.Param{{
+						Params: []v1alpha1.ResourceParam{{
 							Name:  "location",
 							Value: "gs://my-bucket/path/to/my-object.tar.gz", // TODO: generation
 						}, {
@@ -230,14 +230,14 @@ func TestToTaskRun_Resources(t *testing.T) {
 		Spec: v1alpha1.TaskRunSpec{
 			ServiceAccount: constants.ServiceAccountName,
 			TaskSpec: &v1alpha1.TaskSpec{
-				Steps: []corev1.Container{{
+				Steps: []v1alpha1.Step{{Container: corev1.Container{
 					Image: "ubuntu",
 					Resources: corev1.ResourceRequirements{Requests: corev1.ResourceList{
 						corev1.ResourceCPU:              resource.MustParse("32"),
 						corev1.ResourceMemory:           resource.MustParse("28.8Gi"),
 						corev1.ResourceEphemeralStorage: resource.MustParse("500Gi"),
 					}},
-				}},
+				}}},
 			},
 		},
 	}
@@ -289,7 +289,7 @@ func TestToBuild(t *testing.T) {
 					Name: "source",
 					ResourceSpec: &v1alpha1.PipelineResourceSpec{
 						Type: v1alpha1.PipelineResourceTypeStorage,
-						Params: []v1alpha1.Param{{
+						Params: []v1alpha1.ResourceParam{{
 							Name:  "location",
 							Value: "gs://my-bucket/path/to/my-object.tar.gz#12345",
 						}, {
@@ -303,7 +303,7 @@ func TestToBuild(t *testing.T) {
 				}},
 			},
 			TaskSpec: &v1alpha1.TaskSpec{
-				Steps: []corev1.Container{{
+				Steps: []v1alpha1.Step{{Container: corev1.Container{
 					Image:      "success",
 					Name:       "id",
 					Command:    []string{"foo", "bar", "baz"},
@@ -319,13 +319,13 @@ func TestToBuild(t *testing.T) {
 						Name:      "foo",
 						MountPath: "/foo",
 					}},
-				}, {
+				}}, {Container: corev1.Container{
 					Image: "failure",
-				}, {
+				}}, {Container: corev1.Container{
 					Image: "running",
-				}, {
+				}}, {Container: corev1.Container{
 					Image: "waiting",
-				}},
+				}}},
 			},
 		},
 		Status: v1alpha1.TaskRunStatus{
@@ -339,6 +339,7 @@ func TestToBuild(t *testing.T) {
 			StartTime:      &startTime,
 			CompletionTime: &endTime,
 			Steps: []v1alpha1.StepState{{
+				ImageID: "docker-pullable://foo@sha256:abcdef",
 				ContainerState: corev1.ContainerState{
 					Terminated: &corev1.ContainerStateTerminated{
 						StartedAt:  startTime,
@@ -347,6 +348,7 @@ func TestToBuild(t *testing.T) {
 					},
 				},
 			}, {
+				ImageID: "docker-pullable://bar@sha256:def123",
 				ContainerState: corev1.ContainerState{
 					Terminated: &corev1.ContainerStateTerminated{
 						StartedAt:  startTime,
@@ -356,12 +358,14 @@ func TestToBuild(t *testing.T) {
 					},
 				},
 			}, {
+				// No image ID.
 				ContainerState: corev1.ContainerState{
 					Running: &corev1.ContainerStateRunning{
 						StartedAt: startTime,
 					},
 				},
 			}, {
+				ImageID: "docker-pullable://baz@sha256:123456",
 				ContainerState: corev1.ContainerState{
 					Waiting: &corev1.ContainerStateWaiting{},
 				},
@@ -417,7 +421,14 @@ func TestToBuild(t *testing.T) {
 		}, {
 			Name: "waiting",
 		}},
-		Results: &gcb.Results{},
+		Results: &gcb.Results{
+			BuildStepImages: []string{
+				"sha256:abcdef",
+				"sha256:def123",
+				"",
+				"sha256:123456",
+			},
+		},
 	}
 	if diff := jsondiff(got, want); diff != "" {
 		t.Fatalf("Got diff: %s", diff)
@@ -488,13 +499,13 @@ func TestToBuild_MoreSteps(t *testing.T) {
 		},
 		Spec: v1alpha1.TaskRunSpec{
 			TaskSpec: &v1alpha1.TaskSpec{
-				Steps: []corev1.Container{{
+				Steps: []v1alpha1.Step{{Container: corev1.Container{
 					Image: "one",
-				}, {
+				}}, {Container: corev1.Container{
 					Image: "two",
-				}, {
+				}}, {Container: corev1.Container{
 					Image: "three",
-				}},
+				}}},
 			},
 		},
 		Status: v1alpha1.TaskRunStatus{
@@ -553,7 +564,9 @@ func TestToBuild_MoreSteps(t *testing.T) {
 			Timing: &gcb.TimeSpan{StartTime: stepThreeStart.Format(time.RFC3339)},
 			Status: WORKING,
 		}},
-		Results: &gcb.Results{},
+		Results: &gcb.Results{
+			BuildStepImages: []string{"", "", ""},
+		},
 		Timing: map[string]gcb.TimeSpan{
 			"FETCHSOURCE": gcb.TimeSpan{
 				StartTime: sourceFetchStart.Format(time.RFC3339),
@@ -563,5 +576,44 @@ func TestToBuild_MoreSteps(t *testing.T) {
 	}
 	if diff := jsondiff(got, want); diff != "" {
 		t.Fatalf("Got diff: %s", diff)
+	}
+}
+
+func TestGetImageDigest(t *testing.T) {
+	for _, c := range []struct {
+		imageID, want string
+	}{{
+		// normal case
+		imageID: "docker-pullable://image-name@sha256:abcdefg",
+		want:    "sha256:abcdefg",
+	}, {
+		// new digest type!
+		imageID: "docker-pullable://image-name@sha512:abcdefg",
+		want:    "sha512:abcdefg",
+	}, {
+		// invalid prefix
+		imageID: "not-pullable://blahblah",
+		want:    "",
+	}, {
+		// invalid, ends in @
+		imageID: "docker-pullable://image-name@",
+		want:    "",
+	}, {
+		// invalid, does not contain @
+		imageID: "docker-pullable://undigested",
+		want:    "",
+	}, {
+		// not valid, but parseable anyway; trims from the last @
+		imageID: "docker-pullable://contains-@-image@sha256:abcdefg",
+		want:    "sha256:abcdefg",
+	}, {
+		// empty in, empty out
+		imageID: "",
+		want:    "",
+	}} {
+		got := getImageDigest(c.imageID)
+		if got != c.want {
+			t.Errorf("getImageDigest(%q): got %q, want %q", c.imageID, got, c.want)
+		}
 	}
 }
