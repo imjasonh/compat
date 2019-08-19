@@ -35,6 +35,10 @@ func (s *Server) cancel(buildID string) (*gcb.Build, error) {
 	}
 
 	tr.Spec.Status = v1alpha1.TaskRunSpecStatusCancelled
+	if tr.Annotations == nil {
+		tr.Annotations = map[string]string{}
+	}
+	tr.Annotations["cloudbuild.googleapis.com/cancelled"] = "true"
 	tr, err = s.client.Update(tr)
 	if err != nil {
 		return nil, err

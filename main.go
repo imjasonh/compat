@@ -22,9 +22,12 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/GoogleCloudPlatform/compat/pkg/constants"
 	"github.com/GoogleCloudPlatform/compat/pkg/server"
@@ -64,17 +67,40 @@ func main() {
 	router.POST("/v1/projects/:projectID/builds", srv.CreateBuild)
 	router.GET("/v1/projects/:projectID/builds", srv.ListBuilds)
 	router.GET("/v1/operations/build/:projectID/:opName", srv.GetOperation)
-	// TODO: Correct path is ":cancel" not "/cancel"
-	// https://github.com/julienschmidt/httprouter/issues/196
 	router.GET("/v1/projects/:projectID/builds/:buildID", srv.GetBuild)
-	router.POST("/v1/projects/:projectID/builds/:buildID/cancel", srv.CancelBuild)
+	router.MethodNotAllowed = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// TODO: httprouter does not support paths containing the ":"
+		// literal. To support the path to cancel builds, we hook in to
+		// the MethodNotAllowed handler and parse the request
+		// ourselves.
+		// https://github.com/julienschmidt/httprouter/issues/196
+		//
+		// Avoid invoking regexp matching if the request isn't a POST
+		// to projects/*
+
+		if r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/v1/projects/") {
+			if found := cancelPathRE.FindStringSubmatch(r.URL.Path); len(found) == 3 {
+				projectID := found[1]
+				buildID := found[2]
+				srv.CancelBuild(w, r, projectID, buildID)
+				return
+			}
+		}
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	})
 	router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Not found:", r.Method, r.URL.Path)
+		log.Printf("Not found: %s %s", r.Method, r.URL.Path)
 		http.Error(w, "Not found", http.StatusNotFound)
 	})
+	router.PanicHandler = func(w http.ResponseWriter, r *http.Request, i interface{}) {
+		log.Printf("PANIC: %v", i)
+		http.Error(w, fmt.Sprintf("panic: %v", i), http.StatusInternalServerError)
+	}
 	log.Println("Serving on :8080...")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
+
+var cancelPathRE = regexp.MustCompile(`/v1/projects/([a-z-]+)/builds/([a-z0-9-]+):cancel`)
 
 func offClusterConfig(clusterName string) (*rest.Config, error) {
 	ctx := context.Background()

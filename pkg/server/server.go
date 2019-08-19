@@ -247,8 +247,8 @@ func (s *Server) GetOperation(w http.ResponseWriter, r *http.Request, ps httprou
 	}
 }
 
-func (s *Server) CancelBuild(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if err := checkProject(ps.ByName("projectID")); err != nil {
+func (s *Server) CancelBuild(w http.ResponseWriter, r *http.Request, projectID, buildID string) {
+	if err := checkProject(projectID); err != nil {
 		errorutil.Serve(w, err)
 		return
 	}
@@ -257,7 +257,6 @@ func (s *Server) CancelBuild(w http.ResponseWriter, r *http.Request, ps httprout
 		return
 	}
 
-	buildID := ps.ByName("buildID")
 	log.Printf("GetBuild for build %q", buildID)
 
 	b, err := s.cancel(buildID)
