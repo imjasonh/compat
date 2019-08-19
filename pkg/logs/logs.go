@@ -73,6 +73,22 @@ func (l LogCopier) Copy(name string) error {
 			return fmt.Errorf("Error closing K8s logs stream: %v", err)
 		}
 	}
+
+	// Annotate the TaskRun to note that the logs are done being copied.
+	// pkg/convert/convert.go uses this to determine whether it should
+	// return a finished Build status, so that gcloud stops polling for
+	// logs.
+	tr, err := l.Client.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("Error getting TaskRun to annotate for logs copy completion: %v", err)
+	}
+	if tr.Annotations == nil {
+		tr.Annotations = map[string]string{}
+	}
+	tr.Annotations["cloudbuild.googleapis.com/logs-copied"] = "true"
+	if _, err := l.Client.Update(tr); err != nil {
+		return fmt.Errorf("Error annotating TaskRun to annotate for logs copy completion: %v", err)
+	}
 	return nil
 }
 

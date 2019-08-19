@@ -268,9 +268,17 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 			out.Status = WORKING
 		}
 	case cond.Status == corev1.ConditionFalse:
-		out.Status = FAILURE
+		if _, found := tr.Annotations["cloudbuild.googleapis.com/logs-copied"]; found {
+			out.Status = FAILURE
+		} else {
+			out.Status = WORKING
+		}
 	case cond.Status == corev1.ConditionTrue:
-		out.Status = SUCCESS
+		if _, found := tr.Annotations["cloudbuild.googleapis.com/logs-copied"]; found {
+			out.Status = SUCCESS
+		} else {
+			out.Status = WORKING
+		}
 	}
 
 	if !tr.ObjectMeta.CreationTimestamp.IsZero() {

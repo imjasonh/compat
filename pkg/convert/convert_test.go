@@ -279,7 +279,8 @@ func TestToBuild(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: buildID,
 			Annotations: map[string]string{
-				"entrypoint-0": "foo",
+				"entrypoint-0":                          "foo",
+				"cloudbuild.googleapis.com/logs-copied": "true",
 			},
 			CreationTimestamp: createTime,
 		},
@@ -438,6 +439,7 @@ func TestToBuild(t *testing.T) {
 func TestToBuild_Status(t *testing.T) {
 	for _, c := range []struct {
 		cond apis.Condition
+		ann  map[string]string
 		want string
 	}{{
 		cond: apis.Condition{},
@@ -453,11 +455,29 @@ func TestToBuild_Status(t *testing.T) {
 			Type:   apis.ConditionSucceeded,
 			Status: corev1.ConditionFalse,
 		},
+		want: WORKING, // Logs not yet copied.
+	}, {
+		cond: apis.Condition{
+			Type:   apis.ConditionSucceeded,
+			Status: corev1.ConditionFalse,
+		},
+		ann: map[string]string{
+			"cloudbuild.googleapis.com/logs-copied": "true",
+		},
 		want: FAILURE,
 	}, {
 		cond: apis.Condition{
 			Type:   apis.ConditionSucceeded,
 			Status: corev1.ConditionTrue,
+		},
+		want: WORKING, // Logs not yet copied.
+	}, {
+		cond: apis.Condition{
+			Type:   apis.ConditionSucceeded,
+			Status: corev1.ConditionTrue,
+		},
+		ann: map[string]string{
+			"cloudbuild.googleapis.com/logs-copied": "true",
 		},
 		want: SUCCESS,
 	}, {
@@ -470,6 +490,9 @@ func TestToBuild_Status(t *testing.T) {
 	}} {
 		t.Run(c.want, func(t *testing.T) {
 			got, err := ToBuild(v1alpha1.TaskRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: c.ann,
+				},
 				Spec: v1alpha1.TaskRunSpec{
 					TaskSpec: &v1alpha1.TaskSpec{},
 				},
@@ -496,6 +519,9 @@ func TestToBuild_MoreSteps(t *testing.T) {
 	got, err := ToBuild(v1alpha1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: buildID,
+			Annotations: map[string]string{
+				"cloudbuild.googleapis.com/logs-copied": "true",
+			},
 		},
 		Spec: v1alpha1.TaskRunSpec{
 			TaskSpec: &v1alpha1.TaskSpec{
