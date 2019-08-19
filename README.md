@@ -13,13 +13,12 @@ assorted [differences](#differences).
 
 ## TODOs
 
-A partial list:
+Easy-ish items, a partial list:
 
-- [ ] Support .tgz source archives uploaded from gcloud
 - [ ] Resolve GCS source provenance at Build creation time
-- [ ] Support container image outputs, report built image digests
-- [ ] CancelBuild
 - [ ] Real versioned release YAMLs
+- [ ] CancelBuild
+- [ ] Support container image outputs
 
 ### Differences
 

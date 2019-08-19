@@ -54,7 +54,7 @@ github.com/modern-go/reflect2
 github.com/pkg/errors
 # github.com/sergi/go-diff v1.0.0
 github.com/sergi/go-diff/diffmatchpatch
-# github.com/tektoncd/pipeline v0.6.0
+# github.com/tektoncd/pipeline v0.0.0-20190816094942-5638925d153c5c3abe876129745850c951a213ba
 github.com/tektoncd/pipeline/pkg/client/clientset/versioned
 github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1
 github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1

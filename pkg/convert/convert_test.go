@@ -192,7 +192,7 @@ func TestToTaskRun(t *testing.T) {
 							Value: "gs://my-bucket/path/to/my-object.tar.gz", // TODO: generation
 						}, {
 							Name:  "artifactType",
-							Value: string(v1alpha1.GCSArchive),
+							Value: string(v1alpha1.GCSTarGzArchive),
 						}, {
 							Name:  "type",
 							Value: "build-gcs",
