@@ -17,7 +17,6 @@ Easy-ish items, a partial list:
 
 - [ ] Resolve GCS source provenance at Build creation time
 - [ ] Real versioned release YAMLs
-- [ ] CancelBuild
 - [ ] Support container image outputs
 
 ### Differences

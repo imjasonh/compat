@@ -280,6 +280,9 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 			out.Status = WORKING
 		}
 	}
+	if _, found := tr.Annotations["cloudbuild.googleapis.com/cancelled"]; found {
+		out.Status = CANCELLED
+	}
 
 	if !tr.ObjectMeta.CreationTimestamp.IsZero() {
 		out.CreateTime = tr.ObjectMeta.CreationTimestamp.Time.Format(time.RFC3339)
@@ -354,4 +357,5 @@ const (
 	SUCCESS   = "SUCCESS"
 	FAILURE   = "FAILURE"
 	QUEUED    = "QUEUED"
+	CANCELLED = "CANCELLED"
 )

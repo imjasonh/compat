@@ -487,6 +487,15 @@ func TestToBuild_Status(t *testing.T) {
 			Reason: "ExceededNodeResources",
 		},
 		want: QUEUED,
+	}, {
+		cond: apis.Condition{
+			Type:   apis.ConditionSucceeded,
+			Status: corev1.ConditionFalse,
+		},
+		ann: map[string]string{
+			"cloudbuild.googleapis.com/cancelled": "true",
+		},
+		want: CANCELLED,
 	}} {
 		t.Run(c.want, func(t *testing.T) {
 			got, err := ToBuild(v1alpha1.TaskRun{
