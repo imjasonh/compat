@@ -36,9 +36,7 @@ import (
 	duck "knative.dev/pkg/apis/duck/v1beta1"
 )
 
-const (
-	buildID = "build-id"
-)
+const buildID = "build-id"
 
 func init() {
 	constants.ProjectID = "project-id"
@@ -86,7 +84,7 @@ func TestIncompatibleToTaskRun(t *testing.T) {
 }
 
 func TestToTaskRun(t *testing.T) {
-	build, err := ToTaskRun(&gcb.Build{
+	got, err := ToTaskRun(&gcb.Build{
 		Id:      "compatible",
 		Timeout: time.Minute.String(),
 		Steps: []*gcb.BuildStep{{
@@ -124,12 +122,12 @@ func TestToTaskRun(t *testing.T) {
 		t.Fatalf("ToTaskRun: %v", err)
 	}
 
-	wantTaskRun := &v1alpha1.TaskRun{
+	want := &v1alpha1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "compatible",
 			Namespace: constants.Namespace,
 			Annotations: map[string]string{
-				"entrypoint-0": "bash",
+				"cloudbuild.googleapis.com/entrypoint-0": "bash",
 			},
 		},
 		Spec: v1alpha1.TaskRunSpec{
@@ -202,7 +200,7 @@ func TestToTaskRun(t *testing.T) {
 			},
 		},
 	}
-	if diff := jsondiff(build, wantTaskRun); diff != "" {
+	if diff := jsondiff(got, want); diff != "" {
 		t.Errorf("ToTaskRun build diff: %s", diff)
 	}
 }
@@ -279,8 +277,8 @@ func TestToBuild(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: buildID,
 			Annotations: map[string]string{
-				"entrypoint-0":                          "foo",
-				"cloudbuild.googleapis.com/logs-copied": "true",
+				"cloudbuild.googleapis.com/entrypoint-0": "foo",
+				"cloudbuild.googleapis.com/logs-copied":  "true",
 			},
 			CreationTimestamp: createTime,
 		},
