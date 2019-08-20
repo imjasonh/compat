@@ -114,7 +114,7 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 		cmd := s.Args
 		if s.Entrypoint != "" {
 			cmd = append([]string{s.Entrypoint}, cmd...)
-			out.Annotations[fmt.Sprintf("entrypoint-%d", idx)] = s.Entrypoint
+			out.Annotations[fmt.Sprintf("cloudbuild.googleapis.com/entrypoint-%d", idx)] = s.Entrypoint
 		}
 
 		var volMounts []corev1.VolumeMount
@@ -216,7 +216,7 @@ func ToBuild(tr v1alpha1.TaskRun) (*gcb.Build, error) {
 		}
 		var ep string
 		var args []string
-		if epa, found := tr.Annotations[fmt.Sprintf("entrypoint-%d", idx)]; found {
+		if epa, found := tr.Annotations[fmt.Sprintf("cloudbuild.googleapis.com/entrypoint-%d", idx)]; found {
 			ep = epa
 			args = s.Command[1:]
 		} else {
