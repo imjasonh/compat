@@ -15,16 +15,25 @@
 # limitations under the License.
 
 set -o errexit
-set -o nounset
 set -o pipefail
 
 version=$1
-
-out=release.yaml
+out=release-unversioned.yaml
 if [ "$1" != "" ]; then
   out=release-${version}.yaml
 fi
+out=$(mktemp -d)/${out}
 
-echo writing ${out}
+set -o nounset
 
-KO_DOCKER_REPO=gcr.io/gcb-compat ko resolve -t ${version} -P -f config/  > ${out}
+# Generate release-X.Y.Z.yaml and copy to GCS.
+echo Generating ${out}
+KO_DOCKER_REPO=gcr.io/gcb-compat ko resolve -t "${version}" -P -f config/  > ${out}
+gsutil cp ${out} gs://gcb-compat-releases
+
+# Generate latest Tekton release YAML and copy to GCS.
+tmp=$(mktemp -d)
+outtmp=$(mktemp -d)
+git clone --depth=1 https://github.com/tektoncd/pipeline ${tmp}
+KO_DOCKER_REPO=gcr.io/gcb-compat ko resolve -f ${tmp}/config/ > ${outtmp}/tekton.yaml
+gsutil cp ${outtmp}/tekton.yaml gs://gcb-compat-releases
