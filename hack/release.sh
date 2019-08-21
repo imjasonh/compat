@@ -22,9 +22,9 @@ version=$1
 
 out=release.yaml
 if [ "$1" != "" ]; then
-  out=release-$1.yaml
+  out=release-${version}.yaml
 fi
 
 echo writing ${out}
 
-KO_DOCKER_REPO=gcr.io/gcb-compat ko resolve -t 0.0.1 -P -f config/  > ${out}
+KO_DOCKER_REPO=gcr.io/gcb-compat ko resolve -t ${version} -P -f config/  > ${out}
