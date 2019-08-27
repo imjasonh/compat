@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -29,14 +30,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/GoogleCloudPlatform/compat/pkg/constants"
 	"github.com/GoogleCloudPlatform/compat/pkg/server"
 	"github.com/julienschmidt/httprouter"
 	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	container "google.golang.org/api/container/v1beta1"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
@@ -54,11 +54,10 @@ func main() {
 		log.Fatalf("Could not get cluster REST config: %v", err)
 	}
 
-	client := versioned.NewForConfigOrDie(cfg).TektonV1alpha1().TaskRuns(constants.Namespace)
-
-	podClient := typedcorev1.NewForConfigOrDie(cfg).Pods(constants.Namespace)
-
-	srv := server.New(client, podClient)
+	srv := server.New(
+		versioned.NewForConfigOrDie(cfg),
+		k8s.NewForConfigOrDie(cfg),
+	)
 	if err := srv.Preflight(); err != nil {
 		log.Fatalf("❌ Preflight check failed: %v", err)
 	}
@@ -103,6 +102,8 @@ func main() {
 var cancelPathRE = regexp.MustCompile(`/v1/projects/([a-z-]+)/builds/([a-z0-9-]+):cancel`)
 
 func offClusterConfig(clusterName string) (*rest.Config, error) {
+	log.Printf("Getting off-cluster config for %q", clusterName)
+
 	ctx := context.Background()
 	ts, err := google.DefaultTokenSource(ctx, "https://www.googleapis.com/auth/cloud-platform")
 	if err != nil {
@@ -116,6 +117,10 @@ func offClusterConfig(clusterName string) (*rest.Config, error) {
 	gc, err := svc.Projects.Locations.Clusters.Get(clusterName).Do()
 	if err != nil {
 		return nil, err
+	}
+
+	if gc.MasterAuth == nil {
+		return nil, errors.New("cluster MasterAuth was nil")
 	}
 
 	caBytes, err := base64.StdEncoding.DecodeString(gc.MasterAuth.ClusterCaCertificate)

@@ -34,8 +34,8 @@ import (
 )
 
 func (s *Server) create(b *gcb.Build) (*gcb.Operation, error) {
-	log.Println("Creating Build...")
 	b.Id = uuid.New().String() // Generate a new build ID.
+	log.Println("Creating Build", b.Id)
 
 	// Apply substitutions.
 	if err := convert.SubstituteBuildFields(b); err != nil {

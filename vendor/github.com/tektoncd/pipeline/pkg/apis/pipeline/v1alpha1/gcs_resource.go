@@ -145,9 +145,9 @@ func (s *GCSResource) GetDownloadSteps(sourcePath string) ([]Step, error) {
 }
 
 func (s *GCSResource) GetUploadVolumeSpec(spec *TaskSpec) ([]corev1.Volume, error) {
-	return getStorageVolumeSpec(s, spec)
+	return getStorageUploadVolumeSpec(s, spec)
 }
 
 func (s *GCSResource) GetDownloadVolumeSpec(spec *TaskSpec) ([]corev1.Volume, error) {
-	return getStorageVolumeSpec(s, spec)
+	return getStorageUploadVolumeSpec(s, spec)
 }

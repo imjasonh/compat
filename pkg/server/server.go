@@ -33,6 +33,7 @@ import (
 	"github.com/GoogleCloudPlatform/compat/pkg/pubsub"
 	"github.com/GoogleCloudPlatform/compat/pkg/server/errorutil"
 	"github.com/julienschmidt/httprouter"
+	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	typedv1alpha1 "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -40,7 +41,7 @@ import (
 	crm "google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/option"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	k8s "k8s.io/client-go/kubernetes"
 )
 
 type Server struct {
@@ -50,14 +51,11 @@ type Server struct {
 	pubsub     *pubsub.Publisher
 }
 
-func New(client typedv1alpha1.TaskRunInterface, podClient typedcorev1.PodExpansion) *Server {
+func New(tektonClient versioned.Interface, kubeClient k8s.Interface) *Server {
 	return &Server{
-		client: client,
-		logCopier: logs.LogCopier{
-			Client:    client,
-			PodClient: podClient,
-		},
-		pubsub: pubsub.New(),
+		client:    tektonClient.TektonV1alpha1().TaskRuns(constants.Namespace),
+		logCopier: logs.NewLogCopier(tektonClient, kubeClient),
+		pubsub:    pubsub.New(),
 	}
 }
 

@@ -175,7 +175,7 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 						// TODO: generation
 					}, {
 						Name:  "artifactType",
-						Value: string(v1alpha1.GCSTarGzArchive),
+						Value: "TarGzArchive", // TODO: Use v1alpha1.GCSTarGzArchive when it's released.
 					}, {
 						Name:  "type",
 						Value: "build-gcs",
