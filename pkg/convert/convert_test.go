@@ -85,7 +85,7 @@ func TestIncompatibleToTaskRun(t *testing.T) {
 
 func TestToTaskRun(t *testing.T) {
 	got, err := ToTaskRun(&gcb.Build{
-		Id:      "compatible",
+		Id:      buildID,
 		Timeout: time.Minute.String(),
 		Steps: []*gcb.BuildStep{{
 			Name:       "ubuntu",
@@ -124,7 +124,7 @@ func TestToTaskRun(t *testing.T) {
 
 	want := &v1alpha1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "compatible",
+			Name:      buildID,
 			Namespace: constants.Namespace,
 			Annotations: map[string]string{
 				"cloudbuild.googleapis.com/entrypoint-0": "bash",
@@ -143,7 +143,7 @@ func TestToTaskRun(t *testing.T) {
 				Steps: []v1alpha1.Step{{Container: corev1.Container{
 					Image:      "ubuntu",
 					Name:       "my-id",
-					WorkingDir: "foo/bar",
+					WorkingDir: "/workspace/source/foo/bar",
 					Command:    []string{"bash", "sleep", "10"},
 					Env: []corev1.EnvVar{{
 						Name:  "FOO",
@@ -159,13 +159,11 @@ func TestToTaskRun(t *testing.T) {
 						Name:      "bar",
 						MountPath: "/bar",
 					}},
-					Resources: corev1.ResourceRequirements{Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("1"),
-						corev1.ResourceMemory: resource.MustParse("3.75Gi"),
-					}},
+					Resources: corev1.ResourceRequirements{Requests: defaultResources},
 				}}, {Container: corev1.Container{
-					Image:   "busybox",
-					Command: []string{"true"},
+					Image:      "busybox",
+					WorkingDir: "/workspace/source",
+					Command:    []string{"true"},
 					VolumeMounts: []corev1.VolumeMount{{
 						Name:      "foo",
 						MountPath: "/something/else",
@@ -649,4 +647,83 @@ func TestGetImageDigest(t *testing.T) {
 			t.Errorf("getImageDigest(%q): got %q, want %q", c.imageID, got, c.want)
 		}
 	}
+}
+
+func TestToTaskRun_Source(t *testing.T) {
+	got, err := ToTaskRun(&gcb.Build{
+		Id:        buildID,
+		ProjectId: constants.ProjectID,
+		Source: &gcb.Source{
+			StorageSource: &gcb.StorageSource{
+				Bucket: "my-bucket",
+				Object: "path/to/my-object.tar.gz",
+			},
+		},
+		Steps: []*gcb.BuildStep{{
+			Name: "ubuntu",
+			// No dir.
+		}, {
+			Name: "ubuntu",
+			Dir:  "relative/dir",
+		}, {
+			Name: "ubuntu",
+			Dir:  "/absolute/dir",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("ToTaskRun: %v", err)
+	}
+
+	want := &v1alpha1.TaskRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      buildID,
+			Namespace: constants.Namespace,
+		},
+		Spec: v1alpha1.TaskRunSpec{
+			ServiceAccount: constants.ServiceAccountName,
+			TaskSpec: &v1alpha1.TaskSpec{
+				Inputs: &v1alpha1.Inputs{
+					Resources: []v1alpha1.TaskResource{{
+						Name: "source",
+						Type: "storage",
+					}},
+				},
+				Steps: []v1alpha1.Step{{Container: corev1.Container{
+					Image:      "ubuntu",
+					WorkingDir: "/workspace/source",
+					Resources:  corev1.ResourceRequirements{Requests: defaultResources},
+				}}, {Container: corev1.Container{
+					Image:      "ubuntu",
+					WorkingDir: "/workspace/source/relative/dir",
+					Resources:  corev1.ResourceRequirements{Requests: defaultResources},
+				}}, {Container: corev1.Container{
+					Image:      "ubuntu",
+					WorkingDir: "/absolute/dir",
+					Resources:  corev1.ResourceRequirements{Requests: defaultResources},
+				}}},
+			},
+			Inputs: v1alpha1.TaskRunInputs{
+				Resources: []v1alpha1.TaskResourceBinding{{
+					Name: "source",
+					ResourceSpec: &v1alpha1.PipelineResourceSpec{
+						Type: v1alpha1.PipelineResourceTypeStorage,
+						Params: []v1alpha1.ResourceParam{{
+							Name:  "location",
+							Value: "gs://my-bucket/path/to/my-object.tar.gz", // TODO: generation
+						}, {
+							Name:  "artifactType",
+							Value: string(v1alpha1.GCSTarGzArchive),
+						}, {
+							Name:  "type",
+							Value: "build-gcs",
+						}},
+					},
+				}},
+			},
+		},
+	}
+	if diff := jsondiff(got, want); diff != "" {
+		t.Fatalf("Got diff: %s", diff)
+	}
+
 }

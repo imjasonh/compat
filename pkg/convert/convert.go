@@ -20,6 +20,7 @@ package convert
 
 import (
 	"fmt"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -134,10 +135,17 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 			}
 		}
 
+		var workingDir string
+		if path.IsAbs(s.Dir) {
+			workingDir = s.Dir
+		} else if b.Source != nil {
+			workingDir = path.Join("/workspace", "source", s.Dir)
+		}
+
 		out.Spec.TaskSpec.Steps = append(out.Spec.TaskSpec.Steps, v1alpha1.Step{Container: corev1.Container{
 			Image:        s.Name,
 			Name:         s.Id,
-			WorkingDir:   s.Dir,
+			WorkingDir:   workingDir,
 			Command:      cmd,
 			Env:          env,
 			VolumeMounts: volMounts,
