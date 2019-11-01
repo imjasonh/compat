@@ -21,7 +21,6 @@ package convert
 import (
 	"fmt"
 	"path"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -36,20 +35,31 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-var defaultResources = corev1.ResourceList{
-	corev1.ResourceCPU:    resource.MustParse("1"),
-	corev1.ResourceMemory: resource.MustParse("3.75Gi"),
-}
-var resourceMapping = map[string]corev1.ResourceList{
-	"N1_HIGHCPU_8": corev1.ResourceList{
-		corev1.ResourceCPU:    resource.MustParse("8"),
-		corev1.ResourceMemory: resource.MustParse("7.2Gi"),
-	},
-	"N1_HIGHCPU_32": corev1.ResourceList{
-		corev1.ResourceCPU:    resource.MustParse("32"),
-		corev1.ResourceMemory: resource.MustParse("28.8Gi"),
-	},
-}
+var (
+	defaultResources = corev1.ResourceList{
+		corev1.ResourceCPU:    resource.MustParse("1"),
+		corev1.ResourceMemory: resource.MustParse("3.75Gi"),
+	}
+	resourceMapping = map[string]corev1.ResourceList{
+		"N1_HIGHCPU_8": corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("8"),
+			corev1.ResourceMemory: resource.MustParse("7.2Gi"),
+		},
+		"N1_HIGHCPU_32": corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("32"),
+			corev1.ResourceMemory: resource.MustParse("28.8Gi"),
+		},
+	}
+
+	// volumeMounts provides volume mounts to share a Docker socket with a Docker-in-Docker sidecar.
+	volumeMounts = []corev1.VolumeMount{{
+		Name:      "dind-storage",
+		MountPath: "/var/lib/docker",
+	}, {
+		Name:      "dind-socker",
+		MountPath: "var/run/",
+	}}
+)
 
 // ToTaskRun returns the on-cluster representation of the given Build proto message,
 // or errorsutil.Invalid if the build is not compatible with on-cluster execution.
@@ -64,8 +74,8 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 			Annotations: map[string]string{},
 		},
 		Spec: v1alpha1.TaskRunSpec{
-			ServiceAccount: constants.ServiceAccountName, // Run as the Workload Identity KSA/GSA
-			TaskSpec:       &v1alpha1.TaskSpec{},
+			ServiceAccountName: constants.ServiceAccountName, // Run as the Workload Identity KSA/GSA
+			TaskSpec:           &v1alpha1.TaskSpec{},
 		},
 	}
 
@@ -91,87 +101,86 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 		}
 	}
 
-	allVols := map[string]corev1.Volume{}
 	for idx, s := range b.Steps {
 		// These features are not supported.
 		if len(s.WaitFor) != 0 || len(s.SecretEnv) != 0 || s.Timeout != "" {
 			return nil, errorutil.Invalid("Incompatible build: step %d cannot specify waitFor, secretEnv or timeout", idx)
 		}
 
-		// Env vars are specified as []EnvVar, instead of []string
-		// where each value contains a "=" separator.
-		var env []corev1.EnvVar
+		dockerRunArgs := []string{
+			"run", // Invoke "docker run"
+
+			// Remove the container when it's done. This probably
+			// doesn't matter since the whole Docker daemon only
+			// exists in a sidecar for the duration of the build,
+			// but it's easy to do just in case.
+			"--rm",
+
+			// Mount the home volume and point $HOME to it. If a
+			// user requests env vars over this, their request will
+			// take precedence. This matches GCB behavior.
+			"--volume", "homevol", "/builder/home",
+			"--env", "HOME=/builder/home",
+		}
+		// Specify the user's requested environment variables.
 		for _, e := range s.Env {
-			parts := strings.SplitN(e, "=", 2)
-			env = append(env, corev1.EnvVar{
-				Name:  parts[0],
-				Value: parts[1],
-			})
+			dockerRunArgs = append(dockerRunArgs, "--env", e)
 		}
-
-		// Stuff entrypoint+args into command, and add an annotation
-		// denoting any original entrypoint, so we can split them back
-		// apart correctly.
-		cmd := s.Args
+		// Specify the user's requested entrypoint.
 		if s.Entrypoint != "" {
-			cmd = append([]string{s.Entrypoint}, cmd...)
-			out.Annotations[fmt.Sprintf("cloudbuild.googleapis.com/entrypoint-%d", idx)] = s.Entrypoint
+			dockerRunArgs = append(dockerRunArgs, "--entrypoint", s.Entrypoint)
 		}
-
-		var volMounts []corev1.VolumeMount
-		for _, v := range s.Volumes {
-			volMounts = append(volMounts, corev1.VolumeMount{
-				Name:      v.Name,
-				MountPath: v.Path,
-			})
-
-			if _, found := allVols[v.Name]; !found {
-				allVols[v.Name] = corev1.Volume{
-					Name: v.Name,
-					// EmptyDir is a volume which is created as empty at the beginning of
-					// the build and discarded at the end, just like GCB volumes today.
-					VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
-				}
+		// Specify the user's requested working dir.
+		if s.Dir != "" {
+			var workingDir string
+			if path.IsAbs(s.Dir) {
+				workingDir = s.Dir
+			} else if b.Source != nil {
+				workingDir = path.Join("/workspace", "source", s.Dir)
 			}
+			dockerRunArgs = append(dockerRunArgs, "--workdir", workingDir) // TODO: include source dir?
 		}
-
-		var workingDir string
-		if path.IsAbs(s.Dir) {
-			workingDir = s.Dir
-		} else if b.Source != nil {
-			workingDir = path.Join("/workspace", "source", s.Dir)
+		// Mount the user's requested volumes. These will all be
+		// ephemeral volumes, matching GCB's support.
+		for _, v := range s.Volumes {
+			dockerRunArgs = append(dockerRunArgs, "--volume", fmt.Sprintf("%s:%s", v.Name, v.Path))
 		}
+		// Unconditionally mount the Docker socket last, overriding
+		// even if the user requested that mountPath.
+		dockerRunArgs = append(dockerRunArgs, "--volume", "/var/run/docker:/var/run/docker")
+		dockerRunArgs = append(dockerRunArgs, s.Name)    // Run the user's requested image.
+		dockerRunArgs = append(dockerRunArgs, s.Args...) // Pass the user's requested args.
 
+		// Run the user's "docker run" command, connected to the dind
+		// sidecar by volumes.
 		out.Spec.TaskSpec.Steps = append(out.Spec.TaskSpec.Steps, v1alpha1.Step{Container: corev1.Container{
-			Image:        s.Name,
+			Image:        "docker",
 			Name:         s.Id,
-			WorkingDir:   workingDir,
-			Command:      cmd,
-			Env:          env,
-			VolumeMounts: volMounts,
+			Command:      []string{"docker"},
+			Args:         dockerRunArgs,
 			Resources:    resources,
+			VolumeMounts: volumeMounts, // Mount the volumes shared with the Docker-in-Docker sidecar.
 		}})
 	}
 
-	// Specify all the volumes used by all steps.
-	for _, vol := range allVols {
-		out.Spec.TaskSpec.Volumes = append(out.Spec.TaskSpec.Volumes, vol)
-	}
-	// Sort volumes for reproducibility.
-	sort.Slice(out.Spec.TaskSpec.Volumes, func(i, j int) bool { return out.Spec.TaskSpec.Volumes[i].Name < out.Spec.TaskSpec.Volumes[j].Name })
+	// Run a sidecar container to host an ephemeral Docker daemon.
+	out.Spec.TaskSpec.Sidecars = []corev1.Container{{
+		Name:         "docker:dind",
+		VolumeMounts: volumeMounts,
+	}}
 
 	if b.Source != nil {
 		if b.Source.StorageSource == nil {
 			return nil, errorutil.Invalid("Incompatible build: only .source.storageSource is supported")
 		}
 		out.Spec.TaskSpec.Inputs = &v1alpha1.Inputs{
-			Resources: []v1alpha1.TaskResource{{
+			Resources: []v1alpha1.TaskResource{{ResourceDeclaration: v1alpha1.ResourceDeclaration{
 				Name: "source",
 				Type: "storage",
-			}},
+			}}},
 		}
 		out.Spec.Inputs = v1alpha1.TaskRunInputs{
-			Resources: []v1alpha1.TaskResourceBinding{{
+			Resources: []v1alpha1.TaskResourceBinding{{PipelineResourceBinding: v1alpha1.PipelineResourceBinding{
 				Name: "source",
 				ResourceSpec: &v1alpha1.PipelineResourceSpec{
 					Type: v1alpha1.PipelineResourceTypeStorage,
@@ -189,7 +198,7 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 						Value: "build-gcs",
 					}},
 				},
-			}},
+			}}},
 		}
 	}
 

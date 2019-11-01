@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
@@ -37,9 +38,11 @@ type TaskRunSpec struct {
 	// +optional
 	Outputs TaskRunOutputs `json:"outputs,omitempty"`
 	// +optional
-	Results *Results `json:"results,omitempty"`
+	ServiceAccountName string `json:"serviceAccountName"`
+	// DeprecatedServiceAccount is a depreciated alias for ServiceAccountName.
+	// Deprecated: Use serviceAccountName instead.
 	// +optional
-	ServiceAccount string `json:"serviceAccount,omitempty"`
+	DeprecatedServiceAccount string `json:"serviceAccount,omitempty"`
 	// no more than one of the TaskRef and TaskSpec may be specified.
 	// +optional
 	TaskRef *TaskRef `json:"taskRef,omitempty"`
@@ -56,19 +59,6 @@ type TaskRunSpec struct {
 
 	// PodTemplate holds pod specific configuration
 	PodTemplate PodTemplate `json:"podTemplate,omitempty"`
-
-	// FIXME(vdemeester) Deprecated
-	// NodeSelector is a selector which must be true for the pod to fit on a node.
-	// Selector which must match a node's labels for the pod to be scheduled on that node.
-	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
-	// +optional
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
-	// If specified, the pod's tolerations.
-	// +optional
-	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
-	// If specified, the pod's scheduling constraints
-	// +optional
-	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 }
 
 // TaskRunSpecStatus defines the taskrun spec status the user can provide
@@ -89,16 +79,12 @@ type TaskRunInputs struct {
 }
 
 // TaskResourceBinding points to the PipelineResource that
-// will be used for the Task input or output called Name. The optional Path field
-// corresponds to a path on disk at which the Resource can be found (used when providing
-// the resource via mounted volume, overriding the default logic to fetch the Resource).
+// will be used for the Task input or output called Name.
 type TaskResourceBinding struct {
-	Name string `json:"name"`
-	// no more than one of the ResourceRef and ResourceSpec may be specified.
-	// +optional
-	ResourceRef PipelineResourceRef `json:"resourceRef,omitempty"`
-	// +optional
-	ResourceSpec *PipelineResourceSpec `json:"resourceSpec,omitempty"`
+	PipelineResourceBinding
+	// Paths will probably be removed in #1284, and then PipelineResourceBinding can be used instead.
+	// The optional Path field corresponds to a path on disk at which the Resource can be found
+	// (used when providing the resource via mounted volume, overriding the default logic to fetch the Resource).
 	// +optional
 	Paths []string `json:"paths,omitempty"`
 }
@@ -114,10 +100,6 @@ var taskRunCondSet = apis.NewBatchConditionSet()
 // TaskRunStatus defines the observed state of TaskRun
 type TaskRunStatus struct {
 	duckv1beta1.Status `json:",inline"`
-
-	// In #107 should be updated to hold the location logs have been uploaded to
-	// +optional
-	Results *Results `json:"results,omitempty"`
 
 	// PodName is the name of the pod responsible for executing this task's steps.
 	PodName string `json:"podName"`
@@ -299,5 +281,29 @@ func (tr *TaskRun) IsCancelled() bool {
 
 // GetRunKey return the taskrun key for timeout handler map
 func (tr *TaskRun) GetRunKey() string {
-	return fmt.Sprintf("%s/%s/%s", "TaskRun", tr.Namespace, tr.Name)
+	// The address of the pointer is a threadsafe unique identifier for the taskrun
+	return fmt.Sprintf("%s/%p", "TaskRun", tr)
+}
+
+func (tr *TaskRun) GetServiceAccountName() string {
+	name := tr.Spec.ServiceAccountName
+	if name == "" {
+		name = tr.Spec.DeprecatedServiceAccount
+	}
+	return name
+
+}
+
+// IsPartOfPipeline return true if TaskRun is a part of a Pipeline.
+// It also return the name of Pipeline and PipelineRun
+func (tr *TaskRun) IsPartOfPipeline() (bool, string, string) {
+	if tr == nil || len(tr.Labels) == 0 {
+		return false, "", ""
+	}
+
+	if pl, ok := tr.Labels[pipeline.GroupName+pipeline.PipelineLabelKey]; ok {
+		return true, pl, tr.Labels[pipeline.GroupName+pipeline.PipelineRunLabelKey]
+	}
+
+	return false, "", ""
 }

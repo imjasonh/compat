@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/tektoncd/pipeline/pkg/apis/config"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -42,7 +44,10 @@ var _ apis.Defaultable = (*PipelineRun)(nil)
 
 // PipelineRunSpec defines the desired state of PipelineRun
 type PipelineRunSpec struct {
-	PipelineRef PipelineRef `json:"pipelineRef"`
+	// +optional
+	PipelineRef PipelineRef `json:"pipelineRef,omitempty"`
+	// +optional
+	PipelineSpec *PipelineSpec `json:"pipelineSpec,omitempty"`
 	// Resources is a list of bindings specifying which actual instances of
 	// PipelineResources to use for the resources the Pipeline has declared
 	// it needs.
@@ -50,11 +55,15 @@ type PipelineRunSpec struct {
 	// Params is a list of parameter names and values.
 	Params []Param `json:"params,omitempty"`
 	// +optional
-	ServiceAccount string `json:"serviceAccount"`
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+	// DeprecatedServiceAccount is a depreciated alias for ServiceAccountName.
+	// Deprecated: Use serviceAccountName instead.
 	// +optional
-	ServiceAccounts []PipelineRunSpecServiceAccount `json:"serviceAccounts,omitempty"`
+	DeprecatedServiceAccount string `json:"serviceAccount,omitempty"`
 	// +optional
-	Results *Results `json:"results,omitempty"`
+	DeprecatedServiceAccounts []DeprecatedPipelineRunSpecServiceAccount `json:"serviceAccounts,omitempty"`
+	// +optional
+	ServiceAccountNames []PipelineRunSpecServiceAccountName `json:"serviceAccountNames,omitempty"`
 	// Used for cancelling a pipelinerun (and maybe more later on)
 	// +optional
 	Status PipelineRunSpecStatus `json:"status,omitempty"`
@@ -65,19 +74,6 @@ type PipelineRunSpec struct {
 
 	// PodTemplate holds pod specific configuration
 	PodTemplate PodTemplate `json:"podTemplate,omitempty"`
-
-	// FIXME(vdemeester) Deprecated
-	// NodeSelector is a selector which must be true for the pod to fit on a node.
-	// Selector which must match a node's labels for the pod to be scheduled on that node.
-	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
-	// +optional
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
-	// If specified, the pod's tolerations.
-	// +optional
-	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
-	// If specified, the pod's scheduling constraints
-	// +optional
-	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 }
 
 // PipelineRunSpecStatus defines the pipelinerun spec status the user can provide
@@ -111,10 +107,6 @@ type PipelineRef struct {
 // PipelineRunStatus defines the observed state of PipelineRun
 type PipelineRunStatus struct {
 	duckv1beta1.Status `json:",inline"`
-
-	// In #107 should be updated to hold the location logs have been uploaded to
-	// +optional
-	Results *Results `json:"results,omitempty"`
 
 	// StartTime is the time the PipelineRun is actually started.
 	// +optional
@@ -168,10 +160,21 @@ func (pr *PipelineRunStatus) InitializeConditions() {
 	pipelineRunCondSet.Manage(pr).InitializeConditions()
 }
 
-// PipelineRunSpecServiceAccount can be used to configure specific ServiceAccount for a concrete Task
-type PipelineRunSpecServiceAccount struct {
-	TaskName       string `json:"taskName,omitempty"`
-	ServiceAccount string `json:"serviceAccount,omitempty"`
+// DeprecatedPipelineRunSpecServiceAccount can be used to configure specific
+// ServiceAccount for a concrete Task
+// Deprecated: Use pipelineRunSpecServiceAccountName instead.
+type DeprecatedPipelineRunSpecServiceAccount struct {
+	TaskName string `json:"taskName,omitempty"`
+	// DeprecatedServiceAccount is a depreciated alias for ServiceAccountName.
+	// Deprecated: Use serviceAccountName instead.
+	DeprecatedServiceAccount string `json:"serviceAccount,omitempty"`
+}
+
+// PipelineRunSpecServiceAccountName can be used to configure specific
+// ServiceAccountName for a concrete Task
+type PipelineRunSpecServiceAccountName struct {
+	TaskName           string `json:"taskName,omitempty"`
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 // SetCondition sets the condition, unsetting previous conditions with the same
@@ -254,7 +257,8 @@ func (pr *PipelineRun) IsCancelled() bool {
 
 // GetRunKey return the pipelinerun key for timeout handler map
 func (pr *PipelineRun) GetRunKey() string {
-	return fmt.Sprintf("%s/%s/%s", pipelineRunControllerName, pr.Namespace, pr.Name)
+	// The address of the pointer is a threadsafe unique identifier for the pipelinerun
+	return fmt.Sprintf("%s/%p", pipelineRunControllerName, pr)
 }
 
 // IsTimedOut returns true if a pipelinerun has exceeded its spec.Timeout based on its status.Timeout
@@ -264,10 +268,33 @@ func (pr *PipelineRun) IsTimedOut() bool {
 
 	if !startTime.IsZero() && pipelineTimeout != nil {
 		timeout := pipelineTimeout.Duration
+		if timeout == config.NoTimeoutDuration {
+			return false
+		}
 		runtime := time.Since(startTime.Time)
 		if runtime > timeout {
 			return true
 		}
 	}
 	return false
+}
+
+// GetServiceAccountName returns the service account name for a given
+// PipelineTask if configured, otherwise it returns the PipelineRun's serviceAccountName.
+func (pr *PipelineRun) GetServiceAccountName(pipelineTaskName string) string {
+	serviceAccountName := pr.Spec.ServiceAccountName
+	if serviceAccountName == "" {
+		serviceAccountName = pr.Spec.DeprecatedServiceAccount
+	}
+	for _, sa := range pr.Spec.DeprecatedServiceAccounts {
+		if sa.TaskName == pipelineTaskName {
+			serviceAccountName = sa.DeprecatedServiceAccount
+		}
+	}
+	for _, sa := range pr.Spec.ServiceAccountNames {
+		if sa.TaskName == pipelineTaskName {
+			serviceAccountName = sa.ServiceAccountName
+		}
+	}
+	return serviceAccountName
 }
