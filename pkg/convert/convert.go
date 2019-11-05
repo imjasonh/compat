@@ -64,8 +64,8 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 			Annotations: map[string]string{},
 		},
 		Spec: v1alpha1.TaskRunSpec{
-			ServiceAccount: constants.ServiceAccountName, // Run as the Workload Identity KSA/GSA
-			TaskSpec:       &v1alpha1.TaskSpec{},
+			ServiceAccountName: constants.ServiceAccountName, // Run as the Workload Identity KSA/GSA
+			TaskSpec:           &v1alpha1.TaskSpec{},
 		},
 	}
 
@@ -165,13 +165,13 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 			return nil, errorutil.Invalid("Incompatible build: only .source.storageSource is supported")
 		}
 		out.Spec.TaskSpec.Inputs = &v1alpha1.Inputs{
-			Resources: []v1alpha1.TaskResource{{
+			Resources: []v1alpha1.TaskResource{{ResourceDeclaration: v1alpha1.ResourceDeclaration{
 				Name: "source",
 				Type: "storage",
-			}},
+			}}},
 		}
 		out.Spec.Inputs = v1alpha1.TaskRunInputs{
-			Resources: []v1alpha1.TaskResourceBinding{{
+			Resources: []v1alpha1.TaskResourceBinding{{PipelineResourceBinding: v1alpha1.PipelineResourceBinding{
 				Name: "source",
 				ResourceSpec: &v1alpha1.PipelineResourceSpec{
 					Type: v1alpha1.PipelineResourceTypeStorage,
@@ -189,7 +189,7 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 						Value: "build-gcs",
 					}},
 				},
-			}},
+			}}},
 		}
 	}
 

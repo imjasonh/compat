@@ -131,14 +131,14 @@ func TestToTaskRun(t *testing.T) {
 			},
 		},
 		Spec: v1alpha1.TaskRunSpec{
-			ServiceAccount: constants.ServiceAccountName,
-			Timeout:        &metav1.Duration{time.Minute},
+			ServiceAccountName: constants.ServiceAccountName,
+			Timeout:            &metav1.Duration{time.Minute},
 			TaskSpec: &v1alpha1.TaskSpec{
 				Inputs: &v1alpha1.Inputs{
-					Resources: []v1alpha1.TaskResource{{
+					Resources: []v1alpha1.TaskResource{{ResourceDeclaration: v1alpha1.ResourceDeclaration{
 						Name: "source",
 						Type: "storage",
-					}},
+					}}},
 				},
 				Steps: []v1alpha1.Step{{Container: corev1.Container{
 					Image:      "ubuntu",
@@ -179,7 +179,7 @@ func TestToTaskRun(t *testing.T) {
 				}},
 			},
 			Inputs: v1alpha1.TaskRunInputs{
-				Resources: []v1alpha1.TaskResourceBinding{{
+				Resources: []v1alpha1.TaskResourceBinding{{PipelineResourceBinding: v1alpha1.PipelineResourceBinding{
 					Name: "source",
 					ResourceSpec: &v1alpha1.PipelineResourceSpec{
 						Type: v1alpha1.PipelineResourceTypeStorage,
@@ -194,7 +194,7 @@ func TestToTaskRun(t *testing.T) {
 							Value: "build-gcs",
 						}},
 					},
-				}},
+				}}},
 			},
 		},
 	}
@@ -224,7 +224,7 @@ func TestToTaskRun_Resources(t *testing.T) {
 			Namespace: constants.Namespace,
 		},
 		Spec: v1alpha1.TaskRunSpec{
-			ServiceAccount: constants.ServiceAccountName,
+			ServiceAccountName: constants.ServiceAccountName,
 			TaskSpec: &v1alpha1.TaskSpec{
 				Steps: []v1alpha1.Step{{Container: corev1.Container{
 					Image: "ubuntu",
@@ -282,7 +282,7 @@ func TestToBuild(t *testing.T) {
 		},
 		Spec: v1alpha1.TaskRunSpec{
 			Inputs: v1alpha1.TaskRunInputs{
-				Resources: []v1alpha1.TaskResourceBinding{{
+				Resources: []v1alpha1.TaskResourceBinding{{PipelineResourceBinding: v1alpha1.PipelineResourceBinding{
 					Name: "source",
 					ResourceSpec: &v1alpha1.PipelineResourceSpec{
 						Type: v1alpha1.PipelineResourceTypeStorage,
@@ -297,7 +297,7 @@ func TestToBuild(t *testing.T) {
 							Value: "build-gcs",
 						}},
 					},
-				}},
+				}}},
 			},
 			TaskSpec: &v1alpha1.TaskSpec{
 				Steps: []v1alpha1.Step{{Container: corev1.Container{
@@ -680,13 +680,13 @@ func TestToTaskRun_Source(t *testing.T) {
 			Namespace: constants.Namespace,
 		},
 		Spec: v1alpha1.TaskRunSpec{
-			ServiceAccount: constants.ServiceAccountName,
+			ServiceAccountName: constants.ServiceAccountName,
 			TaskSpec: &v1alpha1.TaskSpec{
 				Inputs: &v1alpha1.Inputs{
-					Resources: []v1alpha1.TaskResource{{
+					Resources: []v1alpha1.TaskResource{{ResourceDeclaration: v1alpha1.ResourceDeclaration{
 						Name: "source",
 						Type: "storage",
-					}},
+					}}},
 				},
 				Steps: []v1alpha1.Step{{Container: corev1.Container{
 					Image:      "ubuntu",
@@ -703,7 +703,7 @@ func TestToTaskRun_Source(t *testing.T) {
 				}}},
 			},
 			Inputs: v1alpha1.TaskRunInputs{
-				Resources: []v1alpha1.TaskResourceBinding{{
+				Resources: []v1alpha1.TaskResourceBinding{{PipelineResourceBinding: v1alpha1.PipelineResourceBinding{
 					Name: "source",
 					ResourceSpec: &v1alpha1.PipelineResourceSpec{
 						Type: v1alpha1.PipelineResourceTypeStorage,
@@ -718,7 +718,7 @@ func TestToTaskRun_Source(t *testing.T) {
 							Value: "build-gcs",
 						}},
 					},
-				}},
+				}}},
 			},
 		},
 	}
