@@ -37,7 +37,7 @@ spec:
       serviceAccountName: gcb-compat-account
       containers:
       - name: webhook
-        image: github.com/GoogleCloudPlatform/compat/cmd/webhook
+        image: github.com/ImJasonH/compat/cmd/webhook
         volumeMounts:
         - name: config-logging
           mountPath: /etc/config-logging

@@ -28,10 +28,10 @@ import (
 	"strings"
 
 	"cloud.google.com/go/compute/metadata"
-	"github.com/GoogleCloudPlatform/compat/pkg/constants"
-	"github.com/GoogleCloudPlatform/compat/pkg/logs"
-	"github.com/GoogleCloudPlatform/compat/pkg/pubsub"
-	"github.com/GoogleCloudPlatform/compat/pkg/server/errorutil"
+	"github.com/ImJasonH/compat/pkg/constants"
+	"github.com/ImJasonH/compat/pkg/logs"
+	"github.com/ImJasonH/compat/pkg/pubsub"
+	"github.com/ImJasonH/compat/pkg/server/errorutil"
 	"github.com/julienschmidt/httprouter"
 	typedv1alpha1 "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
 	"golang.org/x/oauth2"
@@ -84,7 +84,7 @@ func (s *Server) Preflight() error {
 	log.Println("✔️ Service can get its GCP project ID")
 
 	// GSA can get a Google OAuth token for expected service account:
-	if tok, err := google.ComputeTokenSource("", "https://www.googleapis.com/auth/cloud-platform").Token(); err != nil {
+	if tok, err := google.ComputeTokenSource("").Token(); err != nil {
 		return fmt.Errorf("google.ComputeTokenSource: cannot get Google auth token: %v", err)
 	} else if tok.AccessToken == "" {
 		return fmt.Errorf("google.ComputeTokenSource: AccessToken is empty")

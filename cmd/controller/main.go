@@ -17,18 +17,10 @@ limitations under the License.
 package main
 
 import (
-	"flag"
-
-	"github.com/GoogleCloudPlatform/compat/pkg/reconciler"
+	"github.com/ImJasonH/compat/pkg/reconciler/build"
 	"knative.dev/pkg/injection/sharedmain"
 )
 
-const (
-	// controllerLogKey is the name of the logger for the controller cmd
-	controllerLogKey = "gcb-compat"
-)
-
 func main() {
-	flag.Parse()
-	sharedmain.Main(controllerLogKey, reconciler.NewController())
+	sharedmain.Main("controller", build.NewController)
 }

@@ -36,7 +36,7 @@ spec:
       serviceAccountName: gcb-compat-account
       containers:
       - name: gcb-compat-controller
-        image: github.com/GoogleCloudPlatform/compat/cmd/controller
+        image: github.com/ImJasonH/compat/cmd/controller
         volumeMounts:
         - name: config-logging
           mountPath: /etc/config-logging

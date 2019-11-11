@@ -22,7 +22,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/GoogleCloudPlatform/compat/pkg/convert"
+	"github.com/ImJasonH/compat/pkg/convert"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
 	yaml "gopkg.in/yaml.v2"

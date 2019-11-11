@@ -22,7 +22,7 @@ import (
 	"sync"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/GoogleCloudPlatform/compat/pkg/constants"
+	"github.com/ImJasonH/compat/pkg/constants"
 	gcb "google.golang.org/api/cloudbuild/v1"
 )
 

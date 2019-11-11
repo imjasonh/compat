@@ -43,7 +43,7 @@ to run builds:
 PROJECT_ID=$(gcloud config get-value project)
 CLUSTER_ZONE=us-east4-a
 CLUSTER_NAME=my-cluster-name
-IMAGE=gcr.io/${PROJECT_ID}/github.com/GoogleCloudPlatform/compat
+IMAGE=gcr.io/${PROJECT_ID}/github.com/ImJasonH/compat
 
 gcloud beta run deploy gcb-compat \
   --platform=managed \

@@ -15,12 +15,21 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@master
 
-    - name: Get dependencies
+    - name: Copy to GOPATH
+      env:
+        GOPATH: 'go'
       run: |
-        go get -v -t -d ./...
+        mkdir -p ${GOPATH}/github.com/ImJasonH/compat && \
+            cp -R . ${GOPATH}/github.com/ImJasonH/compat
 
     - name: Build
-      run: go build -v ./...
+      env:
+        GO111MODULE: 'off'
+        GOPATH: 'go'
+      run: go build -v github.com/ImJasonH/compat/...
 
     - name: Test
-      run: go test ./...
+      env:
+        GO111MODULE: 'off'
+        GOPATH: 'go'
+      run: go test -v github.com/ImJasonH/compat/...

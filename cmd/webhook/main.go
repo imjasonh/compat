@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"github.com/GoogleCloudPlatform/compat/pkg/apis"
+	v1 "github.com/ImJasonH/compat/pkg/apis/cloudbuild/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -35,7 +35,8 @@ func NewResourceAdmissionController(ctx context.Context, cmw configmap.Watcher) 
 
 		// The resources to validate and default.
 		map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
-			apis.BuildGVK: &apis.Build{},
+			// List the types to validate.
+			v1.SchemeGroupVersion.WithKind("Build"): &v1.Build{},
 		},
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
