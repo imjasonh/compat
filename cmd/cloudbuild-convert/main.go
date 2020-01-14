@@ -23,7 +23,6 @@ import (
 	"os"
 
 	"github.com/GoogleCloudPlatform/compat/pkg/convert"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	gcb "google.golang.org/api/cloudbuild/v1"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,10 +30,11 @@ import (
 )
 
 var (
-	config    = flag.String("config", "cloudbuild.yaml", "Config file to convert")
-	namespace = flag.String("namespace", "default", "Namespace of resulting output Task")
-	name      = flag.String("name", "converted", "Name of resulting output Task")
-	help      = flag.Bool("help", false, "Print usage and exit")
+	config         = flag.String("config", "cloudbuild.yaml", "Config file to convert")
+	namespace      = flag.String("namespace", "default", "Namespace of resulting output TaskRun")
+	name           = flag.String("name", "converted-", "Prefix of TaskRun name")
+	serviceAccount = flag.String("serviceaccount", "", "Service Account to use to execute the TaskRun")
+	help           = flag.Bool("help", false, "Print usage and exit")
 )
 
 func usage() {
@@ -45,7 +45,7 @@ The resulting Task definition is printed to stdout, where it can be redirected
 to a file or piped to "kubectl apply -f -" to apply it directly to a cluster.
 
 	--config	Config file to convert (default "cloudbuild.yaml")
-	--name		Name of resulting output Task (default "converted")
+	--name		Prefix of TaskRun name (default "converted-")
 	--namespace	Namespace of resulting output Task (default "default")
 	--help		Print usage and exit`)
 	os.Exit(0)
@@ -74,20 +74,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Converting to TaskRun: %v", err)
 	}
-
-	t := &v1alpha1.Task{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "tekton.dev/v1alpha1",
-			Kind:       "Task",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      *name,
-			Namespace: *namespace,
-		},
-		Spec: *tr.Spec.TaskSpec,
+	tr.TypeMeta = metav1.TypeMeta{
+		APIVersion: "tekton.dev/v1alpha1",
+		Kind:       "TaskRun",
 	}
+	tr.ObjectMeta.GenerateName = *name
+	tr.ObjectMeta.Namespace = *namespace
+	tr.Spec.ServiceAccountName = *serviceAccount
 
-	if err := json.NewYAMLSerializer(json.DefaultMetaFactory, nil, nil).Encode(t, os.Stdout); err != nil {
+	if err := json.NewYAMLSerializer(json.DefaultMetaFactory, nil, nil).Encode(tr, os.Stdout); err != nil {
 		log.Fatalf("YAML-encoding Task: %v", err)
 	}
 }

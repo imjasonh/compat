@@ -135,12 +135,8 @@ foo \
 bar \
 baz`,
 				}},
-				Sidecars: []corev1.Container{{
-					Name:         "dind-sidecar",
-					Image:        "docker",
-					VolumeMounts: []corev1.VolumeMount{dockerVolumeMount},
-				}},
-				Volumes: implicitVolumes,
+				Sidecars: []corev1.Container{dindSidecar},
+				Volumes:  implicitVolumes,
 			},
 		},
 	}
@@ -195,12 +191,8 @@ func TestToTaskRun_Resources(t *testing.T) {
 -e HOME=/builder/home \
 image`,
 				}},
-				Sidecars: []corev1.Container{{
-					Name:         "dind-sidecar",
-					Image:        "docker",
-					VolumeMounts: []corev1.VolumeMount{dockerVolumeMount},
-				}},
-				Volumes: implicitVolumes,
+				Sidecars: []corev1.Container{dindSidecar},
+				Volumes:  implicitVolumes,
 			},
 		},
 	}

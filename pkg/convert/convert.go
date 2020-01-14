@@ -34,20 +34,35 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-var defaultResources = corev1.ResourceList{
-	corev1.ResourceCPU:    resource.MustParse("1"),
-	corev1.ResourceMemory: resource.MustParse("3.75Gi"),
-}
-var resourceMapping = map[string]corev1.ResourceList{
-	"N1_HIGHCPU_8": corev1.ResourceList{
-		corev1.ResourceCPU:    resource.MustParse("8"),
-		corev1.ResourceMemory: resource.MustParse("7.2Gi"),
-	},
-	"N1_HIGHCPU_32": corev1.ResourceList{
-		corev1.ResourceCPU:    resource.MustParse("32"),
-		corev1.ResourceMemory: resource.MustParse("28.8Gi"),
-	},
-}
+var (
+	boolTrue         = true
+	defaultResources = corev1.ResourceList{
+		corev1.ResourceCPU:    resource.MustParse("1"),
+		corev1.ResourceMemory: resource.MustParse("3.75Gi"),
+	}
+	resourceMapping = map[string]corev1.ResourceList{
+		"N1_HIGHCPU_8": corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("8"),
+			corev1.ResourceMemory: resource.MustParse("7.2Gi"),
+		},
+		"N1_HIGHCPU_32": corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("32"),
+			corev1.ResourceMemory: resource.MustParse("28.8Gi"),
+		},
+	}
+
+	dindSidecar = corev1.Container{
+		Image:           "docker:dind",
+		VolumeMounts:    []corev1.VolumeMount{dockerVolumeMount},
+		SecurityContext: &corev1.SecurityContext{Privileged: &boolTrue},
+		ReadinessProbe: &corev1.Probe{
+			PeriodSeconds: 1,
+			Handler: corev1.Handler{
+				Exec: &corev1.ExecAction{Command: []string{"docker", "ps"}},
+			},
+		},
+	}
+)
 
 // ToTaskRun returns the on-cluster representation of the given Build proto message,
 // or errorsutil.Invalid if the build is not compatible with on-cluster execution.
@@ -124,11 +139,7 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 
 	out.Spec.TaskSpec.Volumes = implicitVolumes
 
-	out.Spec.TaskSpec.Sidecars = []corev1.Container{{
-		Name:         "dind-sidecar",
-		Image:        "docker",
-		VolumeMounts: []corev1.VolumeMount{dockerVolumeMount},
-	}}
+	out.Spec.TaskSpec.Sidecars = []corev1.Container{dindSidecar}
 
 	return out, nil
 }
@@ -235,7 +246,7 @@ const (
 var (
 	dockerVolumeMount = corev1.VolumeMount{
 		Name:      "dind-socket",
-		MountPath: "/var/run",
+		MountPath: "/var/run/",
 	}
 	workspaceVolumeMount = corev1.VolumeMount{
 		Name:      "workspace",
