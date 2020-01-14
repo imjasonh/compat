@@ -9,6 +9,7 @@ require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.12.5 // indirect
 	github.com/evanphx/json-patch v4.5.0+incompatible // indirect
 	github.com/golang/groupcache v0.0.0-20191027212112-611e8accdfc9 // indirect
+	github.com/google/go-cmp v0.3.1
 	github.com/google/go-containerregistry v0.0.0-20191108172333-79629ba8e9a1 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-multierror v1.0.0 // indirect
@@ -18,7 +19,7 @@ require (
 	github.com/markbates/inflect v1.0.4 // indirect
 	github.com/mattbaird/jsonpatch v0.0.0-20171005235357-81af80346b1a // indirect
 	github.com/sergi/go-diff v1.0.0
-	github.com/tektoncd/pipeline v0.8.0
+	github.com/tektoncd/pipeline v0.9.2
 	go.uber.org/zap v1.12.0
 	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136 // indirect
 	golang.org/x/net v0.0.0-20191101175033-0deb6923b6d9 // indirect

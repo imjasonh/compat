@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	gcb "google.golang.org/api/cloudbuild/v1"
 )
 
@@ -39,7 +40,7 @@ func TestUnknownFields(t *testing.T) {
 	if err := SubstituteBuildFields(b); err != nil {
 		t.Fatalf("Error while substituting build fields: %v", err)
 	}
-	if diff := jsondiff(b, &gcb.Build{
+	want := &gcb.Build{
 		Id: b.Id,
 		Steps: []*gcb.BuildStep{{
 			Name: "gcr.io/project-id/my-builder",
@@ -50,8 +51,9 @@ func TestUnknownFields(t *testing.T) {
 		Options: &gcb.BuildOptions{
 			Env: []string{"GLOBAL=build-id"},
 		},
-	}); diff != "" {
-		t.Errorf("SubstituteBuildFields diff: %s", diff)
+	}
+	if d := cmp.Diff(want, b); d != "" {
+		t.Fatalf("Diff(-want,+got): %s", d)
 	}
 }
 
@@ -158,7 +160,7 @@ func TestUserSubstitutions(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if diff := jsondiff(b, &gcb.Build{
+		want := &gcb.Build{
 			Id: b.Id,
 			Steps: []*gcb.BuildStep{{
 				Dir: tc.want,
@@ -168,8 +170,9 @@ func TestUserSubstitutions(t *testing.T) {
 			},
 			Tags:          []string{tc.want},
 			Substitutions: b.Substitutions,
-		}); diff != "" {
-			t.Errorf("SubstituteBuildFields diff: %s", diff)
+		}
+		if d := cmp.Diff(want, b); d != "" {
+			t.Fatalf("Diff(-want,+got): %s", d)
 		}
 	}
 }
