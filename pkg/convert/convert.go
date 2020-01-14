@@ -94,6 +94,8 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 			Image:        "docker",
 			VolumeMounts: []corev1.VolumeMount{dockerVolumeMount},
 		},
+		// Create a Docker volume to store home directory.
+		Script: "docker volume create home\n",
 	}
 	// Initialize volumes for all steps.
 	seenVols := map[string]struct{}{}
@@ -263,7 +265,13 @@ func toStep(s *gcb.BuildStep) *v1alpha1.Step {
 	}
 
 	// TODO: Pull image first, and collect digest and pull timing.
-	fmt.Fprintln(&b, `docker run \`)
+
+	// By default, mount /workspace to the "host's" (TaskRun Pod's)
+	// /workspace directory, which is mounted across all steps.
+	// /builder/home is backed by a Docker volume.
+	fmt.Fprintln(&b, `docker run \
+-v /workspace:/workspace \
+-v home:/builder/home \`)
 
 	if s.Dir != "" && filepath.IsAbs(s.Dir) {
 		fmt.Fprintln(&b, "--workdir", s.Dir, `\`)
@@ -275,6 +283,7 @@ func toStep(s *gcb.BuildStep) *v1alpha1.Step {
 		fmt.Fprintln(&b, "--entrypoint", s.Entrypoint, `\`)
 	}
 
+	fmt.Fprintln(&b, "-e", "HOME=/builder/home", `\`) // By default, $HOME is /builder/home
 	for _, e := range s.Env {
 		fmt.Fprintln(&b, "-e", e, `\`)
 	}
@@ -316,9 +325,18 @@ L:
 		case strings.HasPrefix(l, "docker run "):
 			continue
 		case strings.HasPrefix(l, "-e "):
-			out.Env = append(out.Env, strings.Split(l, " ")[1])
+			e := strings.Split(l, " ")[1]
+			if e == "HOME=/builder/home" {
+				// Implicit env value.
+				continue
+			}
+			out.Env = append(out.Env, e)
 		case strings.HasPrefix(l, "-v "):
 			v := strings.Split(strings.Split(l, " ")[1], ":")
+			if v[0] == "/workspace" || v[0] == "home" {
+				// Default volumes.
+				continue
+			}
 			out.Volumes = append(out.Volumes, &gcb.Volume{
 				Name: v[0],
 				Path: v[1],
