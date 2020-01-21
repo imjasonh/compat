@@ -109,7 +109,8 @@ func TestToTaskRun(t *testing.T) {
 						Image:        "docker",
 						VolumeMounts: []corev1.VolumeMount{dockerVolumeMount},
 					},
-					Script: `docker volume create home
+					Script: `#!/bin/sh
+docker volume create home
 docker volume create "a"
 docker volume create "b"
 `,
@@ -119,7 +120,8 @@ docker volume create "b"
 						VolumeMounts: implicitVolumeMounts,
 						Resources:    corev1.ResourceRequirements{Requests: defaultResources},
 					},
-					Script: `#id id
+					Script: `#!/bin/sh
+#id id
 docker run \
 -v /workspace:/workspace \
 -v home:/builder/home \
@@ -173,7 +175,9 @@ func TestToTaskRun_Resources(t *testing.T) {
 						Image:        "docker",
 						VolumeMounts: []corev1.VolumeMount{dockerVolumeMount},
 					},
-					Script: "docker volume create home\n",
+					Script: `#!/bin/sh
+docker volume create home
+`,
 				}, {
 					Container: corev1.Container{
 						Image:        "docker",
@@ -184,7 +188,8 @@ func TestToTaskRun_Resources(t *testing.T) {
 							corev1.ResourceEphemeralStorage: resource.MustParse("500Gi"),
 						}},
 					},
-					Script: `docker run \
+					Script: `#!/bin/sh
+docker run \
 -v /workspace:/workspace \
 -v home:/builder/home \
 --workdir /workspace \
@@ -223,13 +228,15 @@ func TestToBuild(t *testing.T) {
 						Image:        "docker",
 						VolumeMounts: []corev1.VolumeMount{dockerVolumeMount},
 					},
-					Script: `exit 0`,
+					Script: `#!/bin/sh
+exit 0`,
 				}, {
 					Container: corev1.Container{
 						Image:        "docker",
 						VolumeMounts: implicitVolumeMounts,
 					},
-					Script: `docker run \
+					Script: `#!/bin/sh
+docker run \
 --workdir /workspace/dir \
 --entrypoint ep \
 -e FOO=foo \
@@ -245,7 +252,8 @@ baz`,
 						Image:        "docker",
 						VolumeMounts: implicitVolumeMounts,
 					},
-					Script: `docker run \
+					Script: `#!/bin/sh
+docker run \
 --workdir /workspace \
 failure`,
 				}, {
@@ -253,7 +261,8 @@ failure`,
 						Image:        "docker",
 						VolumeMounts: implicitVolumeMounts,
 					},
-					Script: `docker run \
+					Script: `#!/bin/sh
+docker run \
 --workdir /workspace \
 running`,
 				}, {
@@ -261,7 +270,8 @@ running`,
 						Image:        "docker",
 						VolumeMounts: implicitVolumeMounts,
 					},
-					Script: `docker run \
+					Script: `#!/bin/sh
+docker run \
 --workdir /workspace \
 waiting`,
 				}},
@@ -405,7 +415,8 @@ func TestToBuild_Status(t *testing.T) {
 								Image:        "docker",
 								VolumeMounts: []corev1.VolumeMount{dockerVolumeMount},
 							},
-							Script: `exit 0`,
+							Script: `#!/bin/sh
+exit 0`,
 						}},
 					},
 				},
@@ -440,13 +451,16 @@ func TestToBuild_MoreSteps(t *testing.T) {
 				Steps: []v1alpha1.Step{{
 					// Init step.
 				}, {
-					Script: `docker run \
+					Script: `#!/bin/sh
+docker run \
 one`,
 				}, {
-					Script: `docker run \
+					Script: `#!/bin/sh
+docker run \
 two`,
 				}, {
-					Script: `docker run \
+					Script: `#!/bin/sh
+docker run \
 three`,
 				}},
 			},
@@ -517,7 +531,8 @@ func TestToAndFromStep(t *testing.T) {
 		},
 		want: &v1alpha1.Step{
 			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
-			Script: `docker run \
+			Script: `#!/bin/sh
+docker run \
 -v /workspace:/workspace \
 -v home:/builder/home \
 --workdir /workspace \
@@ -532,7 +547,8 @@ image`,
 		},
 		want: &v1alpha1.Step{
 			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
-			Script: `docker run \
+			Script: `#!/bin/sh
+docker run \
 -v /workspace:/workspace \
 -v home:/builder/home \
 --workdir /workspace \
@@ -550,7 +566,8 @@ baz`,
 		},
 		want: &v1alpha1.Step{
 			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
-			Script: `docker run \
+			Script: `#!/bin/sh
+docker run \
 -v /workspace:/workspace \
 -v home:/builder/home \
 --workdir /workspace \
@@ -568,7 +585,8 @@ image`,
 		},
 		want: &v1alpha1.Step{
 			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
-			Script: `docker run \
+			Script: `#!/bin/sh
+docker run \
 -v /workspace:/workspace \
 -v home:/builder/home \
 --workdir /workspace \
@@ -585,7 +603,8 @@ image`,
 		},
 		want: &v1alpha1.Step{
 			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
-			Script: `docker run \
+			Script: `#!/bin/sh
+docker run \
 -v /workspace:/workspace \
 -v home:/builder/home \
 --workdir /workspace/foo \
@@ -600,7 +619,8 @@ image`,
 		},
 		want: &v1alpha1.Step{
 			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
-			Script: `docker run \
+			Script: `#!/bin/sh
+docker run \
 -v /workspace:/workspace \
 -v home:/builder/home \
 --workdir /foo \
@@ -615,7 +635,8 @@ image`,
 		},
 		want: &v1alpha1.Step{
 			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
-			Script: `docker run \
+			Script: `#!/bin/sh
+docker run \
 -v /workspace:/workspace \
 -v home:/builder/home \
 --workdir /workspace \
@@ -631,7 +652,8 @@ image`,
 		},
 		want: &v1alpha1.Step{
 			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
-			Script: `#id id
+			Script: `#!/bin/sh
+#id id
 docker run \
 -v /workspace:/workspace \
 -v home:/builder/home \
@@ -652,7 +674,8 @@ image`,
 		},
 		want: &v1alpha1.Step{
 			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
-			Script: `#id id
+			Script: `#!/bin/sh
+#id id
 docker run \
 -v /workspace:/workspace \
 -v home:/builder/home \
