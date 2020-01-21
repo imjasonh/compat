@@ -110,7 +110,9 @@ func ToTaskRun(b *gcb.Build) (*v1alpha1.TaskRun, error) {
 			VolumeMounts: []corev1.VolumeMount{dockerVolumeMount},
 		},
 		// Create a Docker volume to store home directory.
-		Script: "docker volume create home\n",
+		Script: `#!/bin/sh
+docker volume create home
+`,
 	}
 	// Initialize volumes for all steps.
 	seenVols := map[string]struct{}{}
@@ -270,7 +272,7 @@ func toStep(s *gcb.BuildStep) *v1alpha1.Step {
 		},
 	}
 	var b strings.Builder
-
+	fmt.Fprintln(&b, "#!/bin/sh")
 	if s.Id != "" {
 		fmt.Fprintln(&b, "#id", s.Id)
 	}
@@ -333,7 +335,7 @@ L:
 		switch {
 		case strings.HasPrefix(l, "#id "):
 			out.Id = strings.Split(l, " ")[1]
-		case strings.HasPrefix(l, "docker run "):
+		case l == "#!/bin/sh" || strings.HasPrefix(l, "docker run "):
 			continue
 		case strings.HasPrefix(l, "-e "):
 			e := strings.Split(l, " ")[1]
