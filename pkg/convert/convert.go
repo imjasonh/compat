@@ -164,7 +164,8 @@ func ToBuild(tr v1alpha1.TaskRun) (out *gcb.Build, err error) {
 		return nil, errorutil.Invalid("Incompatible taskRun: .spec.taskSpec is required")
 	}
 
-	if steps, statuses := len(tr.Spec.TaskSpec.Steps), len(tr.Status.Steps); steps != statuses {
+	hasStatus := len(tr.Status.Steps) > 0
+	if steps, statuses := len(tr.Spec.TaskSpec.Steps), len(tr.Status.Steps); hasStatus && steps != statuses {
 		return nil, fmt.Errorf("mismatched lengths: steps=%d, statuses=%d", steps, statuses)
 	}
 
@@ -176,8 +177,14 @@ func ToBuild(tr v1alpha1.TaskRun) (out *gcb.Build, err error) {
 		if err != nil {
 			return nil, fmt.Errorf("error converting step %d: %v", i, err)
 		}
+		out.Steps = append(out.Steps, ts)
 
 		// Add step status details.
+		// If the TaskRun doesn't have a status yet (e.g., it was just
+		// created, or the Pod hasn't started yet), just continue.
+		if !hasStatus {
+			continue
+		}
 		state := tr.Status.Steps[i]
 		if term := state.Terminated; term != nil {
 			if term.ExitCode == 0 {
@@ -197,7 +204,6 @@ func ToBuild(tr v1alpha1.TaskRun) (out *gcb.Build, err error) {
 			}
 		}
 
-		out.Steps = append(out.Steps, ts)
 	}
 
 	cond := tr.Status.GetCondition(apis.ConditionSucceeded)
@@ -257,9 +263,6 @@ var (
 	implicitVolumeMounts = []corev1.VolumeMount{dockerVolumeMount, workspaceVolumeMount}
 	implicitVolumes      = []corev1.Volume{{
 		Name:         "dind-socket",
-		VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
-	}, {
-		Name:         "workspace",
 		VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 	}}
 )

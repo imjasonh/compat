@@ -439,6 +439,50 @@ exit 0`,
 	}
 }
 
+func TestToBuild_NoStatus(t *testing.T) {
+	got, err := ToBuild(v1alpha1.TaskRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: buildID,
+		},
+		Spec: v1alpha1.TaskRunSpec{
+			TaskSpec: &v1alpha1.TaskSpec{
+				Steps: []v1alpha1.Step{{
+					// Init step.
+				}, {
+					Script: `#!/bin/sh
+docker run \
+image`,
+				}},
+			},
+		},
+		Status: v1alpha1.TaskRunStatus{
+			Status: duck.Status{
+				Conditions: []apis.Condition{{
+					Type:   apis.ConditionSucceeded,
+					Status: corev1.ConditionUnknown,
+				}},
+			},
+			// No step status yet; TaskRun or Pod hasn't started.
+		},
+	})
+	if err != nil {
+		t.Fatalf("ToBuild: %v", err)
+	}
+
+	want := &gcb.Build{
+		Id:         buildID,
+		ProjectId:  constants.ProjectID,
+		Status:     WORKING,
+		LogsBucket: "gs://project-id_cloudbuild",
+		Steps: []*gcb.BuildStep{{
+			Name: "image",
+		}},
+	}
+	if d := cmp.Diff(want, got); d != "" {
+		t.Fatalf("Diff(-want,+got): %s", d)
+	}
+}
+
 func TestToBuild_MoreSteps(t *testing.T) {
 	stepOneStart, stepTwoStart, stepThreeStart := time.Now().Add(2*time.Hour), time.Now().Add(3*time.Hour), time.Now().Add(4*time.Hour)
 
