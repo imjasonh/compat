@@ -52,7 +52,7 @@ var (
 	}
 
 	dindSidecar = corev1.Container{
-		Image:           "docker:dind",
+		Image:           "docker:18.09-dind",
 		VolumeMounts:    []corev1.VolumeMount{dockerVolumeMount},
 		SecurityContext: &corev1.SecurityContext{Privileged: &boolTrue},
 		ReadinessProbe: &corev1.Probe{
