@@ -107,9 +107,13 @@ func TestToTaskRun(t *testing.T) {
 				Steps: []v1alpha1.Step{{
 					Container: corev1.Container{
 						Image:        "docker",
-						VolumeMounts: []corev1.VolumeMount{dockerVolumeMount},
+						Env:          dockerClientEnvs,
+						VolumeMounts: dockerTLSCertsVolumeMounts,
 					},
 					Script: `#!/bin/sh
+# Wait for the sidecar's generated TLS certs to be generated and shared.
+while [ ! -f /certs/client/ca.pem ]; do sleep 1; done
+set -euxo pipefail
 docker volume create home
 docker volume create "a"
 docker volume create "b"
@@ -117,7 +121,8 @@ docker volume create "b"
 				}, {
 					Container: corev1.Container{
 						Image:        "docker",
-						VolumeMounts: implicitVolumeMounts,
+						Env:          dockerClientEnvs,
+						VolumeMounts: dockerTLSCertsVolumeMounts,
 						Resources:    corev1.ResourceRequirements{Requests: defaultResources},
 					},
 					Script: `#!/bin/sh
@@ -138,7 +143,7 @@ bar \
 baz`,
 				}},
 				Sidecars: []corev1.Container{dindSidecar},
-				Volumes:  implicitVolumes,
+				Volumes:  dockerTLSCertsVolumes,
 			},
 		},
 	}
@@ -173,15 +178,20 @@ func TestToTaskRun_Resources(t *testing.T) {
 				Steps: []v1alpha1.Step{{
 					Container: corev1.Container{
 						Image:        "docker",
-						VolumeMounts: []corev1.VolumeMount{dockerVolumeMount},
+						Env:          dockerClientEnvs,
+						VolumeMounts: dockerTLSCertsVolumeMounts,
 					},
 					Script: `#!/bin/sh
+# Wait for the sidecar's generated TLS certs to be generated and shared.
+while [ ! -f /certs/client/ca.pem ]; do sleep 1; done
+set -euxo pipefail
 docker volume create home
 `,
 				}, {
 					Container: corev1.Container{
 						Image:        "docker",
-						VolumeMounts: implicitVolumeMounts,
+						Env:          dockerClientEnvs,
+						VolumeMounts: dockerTLSCertsVolumeMounts,
 						Resources: corev1.ResourceRequirements{Requests: corev1.ResourceList{
 							corev1.ResourceCPU:              resource.MustParse("32"),
 							corev1.ResourceMemory:           resource.MustParse("28.8Gi"),
@@ -197,7 +207,7 @@ docker run \
 image`,
 				}},
 				Sidecars: []corev1.Container{dindSidecar},
-				Volumes:  implicitVolumes,
+				Volumes:  dockerTLSCertsVolumes,
 			},
 		},
 	}
@@ -226,14 +236,16 @@ func TestToBuild(t *testing.T) {
 					// Init step.
 					Container: corev1.Container{
 						Image:        "docker",
-						VolumeMounts: []corev1.VolumeMount{dockerVolumeMount},
+						Env:          dockerClientEnvs,
+						VolumeMounts: dockerTLSCertsVolumeMounts,
 					},
 					Script: `#!/bin/sh
 exit 0`,
 				}, {
 					Container: corev1.Container{
 						Image:        "docker",
-						VolumeMounts: implicitVolumeMounts,
+						Env:          dockerClientEnvs,
+						VolumeMounts: dockerTLSCertsVolumeMounts,
 					},
 					Script: `#!/bin/sh
 docker run \
@@ -250,7 +262,8 @@ baz`,
 				}, {
 					Container: corev1.Container{
 						Image:        "docker",
-						VolumeMounts: implicitVolumeMounts,
+						Env:          dockerClientEnvs,
+						VolumeMounts: dockerTLSCertsVolumeMounts,
 					},
 					Script: `#!/bin/sh
 docker run \
@@ -259,7 +272,8 @@ failure`,
 				}, {
 					Container: corev1.Container{
 						Image:        "docker",
-						VolumeMounts: implicitVolumeMounts,
+						Env:          dockerClientEnvs,
+						VolumeMounts: dockerTLSCertsVolumeMounts,
 					},
 					Script: `#!/bin/sh
 docker run \
@@ -268,7 +282,8 @@ running`,
 				}, {
 					Container: corev1.Container{
 						Image:        "docker",
-						VolumeMounts: implicitVolumeMounts,
+						Env:          dockerClientEnvs,
+						VolumeMounts: dockerTLSCertsVolumeMounts,
 					},
 					Script: `#!/bin/sh
 docker run \
@@ -413,7 +428,8 @@ func TestToBuild_Status(t *testing.T) {
 						Steps: []v1alpha1.Step{{
 							Container: corev1.Container{
 								Image:        "docker",
-								VolumeMounts: []corev1.VolumeMount{dockerVolumeMount},
+								Env:          dockerClientEnvs,
+								VolumeMounts: dockerTLSCertsVolumeMounts,
 							},
 							Script: `#!/bin/sh
 exit 0`,
@@ -574,7 +590,11 @@ func TestToAndFromStep(t *testing.T) {
 			Name: "image",
 		},
 		want: &v1alpha1.Step{
-			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
+			Container: corev1.Container{
+				Image:        "docker",
+				Env:          dockerClientEnvs,
+				VolumeMounts: dockerTLSCertsVolumeMounts,
+			},
 			Script: `#!/bin/sh
 docker run \
 -v /workspace:/workspace \
@@ -590,7 +610,11 @@ image`,
 			Args: []string{"foo", "bar", "baz"},
 		},
 		want: &v1alpha1.Step{
-			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
+			Container: corev1.Container{
+				Image:        "docker",
+				Env:          dockerClientEnvs,
+				VolumeMounts: dockerTLSCertsVolumeMounts,
+			},
 			Script: `#!/bin/sh
 docker run \
 -v /workspace:/workspace \
@@ -609,7 +633,11 @@ baz`,
 			Env:  []string{"FOO=foo", "BAR=bar", "BAZ=baz"},
 		},
 		want: &v1alpha1.Step{
-			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
+			Container: corev1.Container{
+				Image:        "docker",
+				Env:          dockerClientEnvs,
+				VolumeMounts: dockerTLSCertsVolumeMounts,
+			},
 			Script: `#!/bin/sh
 docker run \
 -v /workspace:/workspace \
@@ -628,7 +656,11 @@ image`,
 			Volumes: []*gcb.Volume{{Name: "a", Path: "/a"}, {Name: "b", Path: "/b"}},
 		},
 		want: &v1alpha1.Step{
-			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
+			Container: corev1.Container{
+				Image:        "docker",
+				Env:          dockerClientEnvs,
+				VolumeMounts: dockerTLSCertsVolumeMounts,
+			},
 			Script: `#!/bin/sh
 docker run \
 -v /workspace:/workspace \
@@ -646,7 +678,11 @@ image`,
 			Dir:  "foo",
 		},
 		want: &v1alpha1.Step{
-			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
+			Container: corev1.Container{
+				Image:        "docker",
+				Env:          dockerClientEnvs,
+				VolumeMounts: dockerTLSCertsVolumeMounts,
+			},
 			Script: `#!/bin/sh
 docker run \
 -v /workspace:/workspace \
@@ -662,7 +698,11 @@ image`,
 			Dir:  "/foo",
 		},
 		want: &v1alpha1.Step{
-			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
+			Container: corev1.Container{
+				Image:        "docker",
+				Env:          dockerClientEnvs,
+				VolumeMounts: dockerTLSCertsVolumeMounts,
+			},
 			Script: `#!/bin/sh
 docker run \
 -v /workspace:/workspace \
@@ -678,7 +718,11 @@ image`,
 			Entrypoint: "ep",
 		},
 		want: &v1alpha1.Step{
-			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
+			Container: corev1.Container{
+				Image:        "docker",
+				Env:          dockerClientEnvs,
+				VolumeMounts: dockerTLSCertsVolumeMounts,
+			},
 			Script: `#!/bin/sh
 docker run \
 -v /workspace:/workspace \
@@ -695,7 +739,11 @@ image`,
 			Id:   "id",
 		},
 		want: &v1alpha1.Step{
-			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
+			Container: corev1.Container{
+				Image:        "docker",
+				Env:          dockerClientEnvs,
+				VolumeMounts: dockerTLSCertsVolumeMounts,
+			},
 			Script: `#!/bin/sh
 #id id
 docker run \
@@ -717,7 +765,11 @@ image`,
 			Args:       []string{"foo", "bar", "baz"},
 		},
 		want: &v1alpha1.Step{
-			Container: corev1.Container{Image: "docker", VolumeMounts: implicitVolumeMounts},
+			Container: corev1.Container{
+				Image:        "docker",
+				Env:          dockerClientEnvs,
+				VolumeMounts: dockerTLSCertsVolumeMounts,
+			},
 			Script: `#!/bin/sh
 #id id
 docker run \
