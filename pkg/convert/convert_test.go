@@ -229,6 +229,9 @@ func TestToBuild(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              buildID,
 			CreationTimestamp: createTime,
+			Annotations: map[string]string{
+				"cloudbuild.googleapis.com/logs-copied": "true",
+			},
 		},
 		Spec: v1alpha1.TaskRunSpec{
 			TaskSpec: &v1alpha1.TaskSpec{
@@ -390,6 +393,7 @@ waiting`,
 func TestToBuild_Status(t *testing.T) {
 	for _, c := range []struct {
 		cond apis.Condition
+		ann  map[string]string
 		want string
 	}{{
 		cond: apis.Condition{},
@@ -405,11 +409,29 @@ func TestToBuild_Status(t *testing.T) {
 			Type:   apis.ConditionSucceeded,
 			Status: corev1.ConditionFalse,
 		},
+		want: WORKING, // Logs not yet copied.
+	}, {
+		cond: apis.Condition{
+			Type:   apis.ConditionSucceeded,
+			Status: corev1.ConditionFalse,
+		},
+		ann: map[string]string{
+			"cloudbuild.googleapis.com/logs-copied": "true",
+		},
 		want: FAILURE,
 	}, {
 		cond: apis.Condition{
 			Type:   apis.ConditionSucceeded,
 			Status: corev1.ConditionTrue,
+		},
+		want: WORKING, // Logs not yet copied.
+	}, {
+		cond: apis.Condition{
+			Type:   apis.ConditionSucceeded,
+			Status: corev1.ConditionTrue,
+		},
+		ann: map[string]string{
+			"cloudbuild.googleapis.com/logs-copied": "true",
 		},
 		want: SUCCESS,
 	}, {
@@ -419,30 +441,28 @@ func TestToBuild_Status(t *testing.T) {
 			Reason: "ExceededNodeResources",
 		},
 		want: QUEUED,
+	}, {
+		cond: apis.Condition{
+			Type:   apis.ConditionSucceeded,
+			Status: corev1.ConditionFalse,
+		},
+		ann: map[string]string{
+			"cloudbuild.googleapis.com/cancelled": "true",
+		},
+		want: CANCELLED,
 	}} {
 		t.Run(c.want, func(t *testing.T) {
 			got, err := ToBuild(v1alpha1.TaskRun{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: c.ann,
+				},
 				Spec: v1alpha1.TaskRunSpec{
-					TaskSpec: &v1alpha1.TaskSpec{
-						Steps: []v1alpha1.Step{{
-							Container: corev1.Container{
-								Image:        "docker",
-								Env:          dockerClientEnvs,
-								VolumeMounts: dockerTLSCertsVolumeMounts,
-							},
-							Script: `#!/bin/sh
-exit 0`,
-						}},
-					},
+					TaskSpec: &v1alpha1.TaskSpec{},
 				},
 				Status: v1alpha1.TaskRunStatus{
 					Status: duck.Status{
 						Conditions: []apis.Condition{c.cond},
 					},
-					Steps: []v1alpha1.StepState{{
-						//
-					}},
 				},
 			})
 			if err != nil {
@@ -505,6 +525,9 @@ func TestToBuild_MoreSteps(t *testing.T) {
 	got, err := ToBuild(v1alpha1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: buildID,
+			Annotations: map[string]string{
+				"cloudbuild.googleapis.com/logs-copied": "true",
+			},
 		},
 		Spec: v1alpha1.TaskRunSpec{
 			TaskSpec: &v1alpha1.TaskSpec{
