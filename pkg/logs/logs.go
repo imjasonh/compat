@@ -38,16 +38,36 @@ type LogCopier struct {
 	PodClient typedcorev1.PodExpansion
 }
 
-func (l LogCopier) Copy(name string) error {
+func (l LogCopier) Copy(name string) (err error) {
+	defer func() {
+		// Annotate the TaskRun to note that the logs are done being copied.
+		// pkg/convert/convert.go uses this to determine whether it should
+		// return a finished Build status, so that gcloud stops polling for
+		// logs.
+		tr, err := l.Client.Get(name, metav1.GetOptions{})
+		if err != nil {
+			err = fmt.Errorf("Error getting TaskRun to annotate for logs copy completion: %v", err)
+			return
+		}
+		if tr.Annotations == nil {
+			tr.Annotations = map[string]string{}
+		}
+		tr.Annotations["cloudbuild.googleapis.com/logs-copied"] = "true"
+		if _, err := l.Client.Update(tr); err != nil {
+			err = fmt.Errorf("Error annotating TaskRun to annotate for logs copy completion: %v", err)
+			return
+		}
+	}()
+
 	objectName := fmt.Sprintf("log-%s.txt", name)
 	w, err := NewWriter(constants.LogsBucket(), objectName)
 	if err != nil {
-		return err
+		return fmt.Errorf("NewWriter: %v", err)
 	}
 
 	podName, containerNames, err := l.waitUntilStart(name)
 	if err != nil {
-		return err
+		return fmt.Errorf("waiting for start: %v", err)
 	}
 
 	for _, containerName := range containerNames {
@@ -74,21 +94,6 @@ func (l LogCopier) Copy(name string) error {
 		}
 	}
 
-	// Annotate the TaskRun to note that the logs are done being copied.
-	// pkg/convert/convert.go uses this to determine whether it should
-	// return a finished Build status, so that gcloud stops polling for
-	// logs.
-	tr, err := l.Client.Get(name, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("Error getting TaskRun to annotate for logs copy completion: %v", err)
-	}
-	if tr.Annotations == nil {
-		tr.Annotations = map[string]string{}
-	}
-	tr.Annotations["cloudbuild.googleapis.com/logs-copied"] = "true"
-	if _, err := l.Client.Update(tr); err != nil {
-		return fmt.Errorf("Error annotating TaskRun to annotate for logs copy completion: %v", err)
-	}
 	return nil
 }
 
