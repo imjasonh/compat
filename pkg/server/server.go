@@ -95,9 +95,10 @@ func (s *Server) Preflight() error {
 	// GSA can write to the logs bucket:
 	logsBucket := constants.LogsBucket()
 	if _, err := logs.NewWriter(logsBucket, "preflight"); err != nil {
-		return fmt.Errorf("object.NewWriter: cannot write preflight object to logs bucket %q: %v", logsBucket, err)
+		log.Printf("WARNING: object.NewWriter: cannot write preflight object to logs bucket %q: %v", logsBucket, err)
+	} else {
+		log.Println("✔️ Service can write to GCS logs bucket")
 	}
-	log.Println("✔️ Service can write to GCS logs bucket")
 
 	// TODO: preflight pods logs.
 	return nil

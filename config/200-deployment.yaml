@@ -32,7 +32,7 @@ spec:
       serviceAccountName: gcb-compat-account
       containers:
       - name: gcb-compat
-        image: github.com/GoogleCloudPlatform/compat/cmd/api
+        image: ko://github.com/GoogleCloudPlatform/compat/cmd/api
         ports:
         - containerPort: 8080
 
