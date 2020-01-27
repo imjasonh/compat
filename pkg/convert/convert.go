@@ -147,8 +147,9 @@ func ToBuild(tr v1alpha1.TaskRun) (out *gcb.Build, err error) {
 			err = fmt.Errorf("error converting TaskRun: %v", r)
 		}
 	}()
+	buildID := tr.ObjectMeta.Name
 	out = &gcb.Build{
-		Id:         tr.ObjectMeta.Name,
+		Id:         buildID,
 		ProjectId:  constants.ProjectID,
 		LogsBucket: fmt.Sprintf("gs://%s", constants.LogsBucket()),
 	}
@@ -239,15 +240,13 @@ func ToBuild(tr v1alpha1.TaskRun) (out *gcb.Build, err error) {
 		out.FinishTime = tr.Status.CompletionTime.Time.Format(time.RFC3339)
 	}
 
-	if podName := tr.Status.PodName; podName != "" {
-		out.LogUrl = fmt.Sprintf(logURLFmt, constants.ProjectID, constants.ProjectID, podName)
-	}
+	out.LogUrl = fmt.Sprintf(logURLFmt, constants.ProjectID, buildID, buildID)
 
 	return out, nil
 }
 
 const (
-	logURLFmt = `https://console.cloud.google.com/logs/viewer?project=%s&advancedFilter=resource.type%%3D"container"%%0Aresource.labels.namespace_id%%3D"gcb-compat"%%0Aresource.labels.project_id%%3D"%s"%%0Aresource.labels.pod_id%%3D"%s"`
+	logURLFmt = `https://console.cloud.google.com/logs/viewer?project=%s&advancedFilter=resource.type%%3D"k8s_container"%%0Aresource.labels.namespace_name%%3D"gcb-compat"%%0Aresource.labels.pod_name>%%3D"%s"%%0Aresource.labels.pod_name<%%3D"%s-zzzzz"`
 	WORKING   = "WORKING"
 	SUCCESS   = "SUCCESS"
 	FAILURE   = "FAILURE"
